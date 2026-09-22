@@ -73,15 +73,20 @@ const ConfirmBooking = ({ userDetails }) => {
 
     setSubmitting(true);
     try {
-      const formData = new FormData(e.currentTarget);
+      // Build the payload from React state (what the user actually sees/typed),
+      // not from the DOM. Reading the DOM let browser autofill silently put the
+      // logged-in user's details back into the fields, so a booking typed for
+      // someone else got submitted under the wrong name/email.
+      const formData = new FormData();
+      formData.set("fullName", form.fullName?.trim() || "");
+      formData.set("email", form.email?.trim() || "");
+      formData.set("phoneNumber", form.phoneNumber?.trim() || "");
+      formData.set("notes", form.notes?.trim() || "");
       formData.set("bookingdate", bookingData.bookingdate);
       formData.set("bookingtime", bookingData.bookingtime);
-      if (!formData.get("serviceName"))
-        formData.set("serviceName", "Oral Contraception");
-      if (!formData.get("providerName"))
-        formData.set("providerName", "Manor Chemist");
-      if (!formData.get("nhsService"))
-        formData.set("nhsService", "NHS Service");
+      formData.set("serviceName", "Oral Contraception");
+      formData.set("providerName", "Manor Chemist");
+      formData.set("nhsService", "NHS Service");
 
       const res = await createBooking(formData);
       if (!res.success) {
