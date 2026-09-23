@@ -243,14 +243,14 @@ export const orderEmailTemplate = ({
   const phone = escapeHtml(phoneNumber || "your registered number");
   const address = escapeHtml(deliveryAddress || "your delivery address");
 
-  // "As requested, we will call you on 15-Jul between 15:00 – 16:00." Only
-  // shown when we have the scheduled slot; otherwise the sentence is skipped.
+  // "We will call you on 07-Aug during 10:00 – 11:00. The 1-hour slot simply
+  // indicates when you may expect a call." Only shown when we have the slot.
   const date = escapeHtml(callDate || "");
   const slot = escapeHtml(callTimeSlot || "");
   const callLine = date
-    ? `As requested, we will call you on <strong>${date}</strong>${
-        slot ? ` between <strong>${slot}</strong>` : ""
-      }. `
+    ? `We will call you on <strong>${date}</strong>${
+        slot ? ` during <strong>${slot}</strong>` : ""
+      }. The 1-hour slot simply indicates when you may expect a call. `
     : "";
 
   return `
@@ -263,38 +263,49 @@ export const orderEmailTemplate = ({
     </tr>
 
     <tr>
-      <td style="padding:20px;font-size:18px;font-weight:bold;color:#333;">
+      <td style="padding:20px 20px 0;font-size:18px;font-weight:bold;color:#333;">
         Order Confirmation
       </td>
     </tr>
 
     <tr>
-      <td style="padding:0 20px 20px;color:#333;font-size:15px;line-height:1.5;">
-        <p>Hi ${name},</p>
+      <td style="padding:16px 20px 20px;color:#333;font-size:15px;line-height:1.6;">
+        <p>Hello ${name},</p>
 
+        <p>Thank you for submitting your contraception request with Nora Health.</p>
+
+        <p style="font-weight:bold;color:#cd8936;margin-top:20px;">Next Steps:</p>
         <p>
-          Your online Nora Health contraception request is under clinical review
-          and we will contact you shortly on ${phone} to discuss it. We offer
-          next day delivery on all consultations completed by 1pm (M&ndash;F).
+          Before we can approve your contraception request we need to complete a
+          quick telephone call &mdash; usually only takes <strong>just 2&ndash;3 minutes</strong>.
+          ${callLine}If there is a specific time that works best for you, feel
+          free to tell us and we'll try our best to match it.
         </p>
 
+        <p style="font-weight:bold;color:#cd8936;margin-top:20px;">Delivery:</p>
         <p>
-          ${callLine}Once your consultation is complete we will post your
-          medication to: <strong>${address}</strong>.
+          After your consultation we will post your medication to
+          <strong>${address}</strong> in discreet packaging. Our service is
+          completely free. If we complete the call before 1pm we can usually
+          arrange for next day delivery using Royal Mail 24 Hour Tracked service.
         </p>
 
-        <p style="margin-top:16px;color:#555;font-size:13px;">
-          If you have any queries or need to amend your appointment please
+        <p style="font-weight:bold;color:#cd8936;margin-top:20px;">Getting in Touch:</p>
+        <p>
+          If you need to adjust your appointment or have any questions you may
+          message us and/or call us directly on
           <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" style="color:#cd8936;text-decoration:underline;">
-            message us on WhatsApp
+            WhatsApp
           </a>
           or email us at
           <a href="mailto:${supportEmail}" style="color:#cd8936;text-decoration:underline;">
             ${supportEmail}
-          </a>. For urgent queries please
-          <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" style="color:#cd8936;text-decoration:underline;">
-            call us directly here via WhatsApp
-          </a>.
+          </a>. For anything urgent please call us directly via WhatsApp.
+        </p>
+
+        <p style="margin-top:16px;">
+          Thank you &mdash; we look forward to speaking with you soon,<br/>
+          Dev
         </p>
       </td>
     </tr>
