@@ -177,6 +177,150 @@ function formatAppointmentRange(start, end) {
     });
   return `${day} at ${t(s)} – ${t(e)}`;
 }
+
+// ---------------------------------------------------------------------------
+// Add-to-calendar helpers (Booking + Order confirmation emails)
+//
+// Appointment datetimes are stored as UK wall-clock inside a UTC field (e.g.
+// 2026-08-07T10:00:00.000Z means 10:00 UK local). Calendar apps work in real
+// UTC instants, so we convert wall-clock -> true UTC by subtracting the
+// Europe/London offset for that date (0 in winter, +60 min in BST), then emit
+// every link/ICS in UTC "Z" time. That keeps 10:00 UK showing as 10:00 for a
+// UK viewer in both summer and winter.
+// ---------------------------------------------------------------------------
+function londonOffsetMinutes(date) {
+  const tzn =
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/London",
+      timeZoneName: "shortOffset",
+    })
+      .formatToParts(date)
+      .find((p) => p.type === "timeZoneName")?.value || "GMT";
+  const m = tzn.match(/GMT([+-]\d{1,2})(?::?(\d{2}))?/);
+  if (!m) return 0; // "GMT" -> winter (0)
+  const h = parseInt(m[1], 10);
+  const min = m[2] ? parseInt(m[2], 10) : 0;
+  return h * 60 + (h < 0 ? -min : min);
+}
+
+// Wall-clock-in-UTC value -> the real UTC instant of the appointment.
+function toUtcInstant(stored) {
+  const d = new Date(stored);
+  return new Date(d.getTime() - londonOffsetMinutes(d) * 60 * 1000);
+}
+
+// Date -> "YYYYMMDDTHHMMSSZ" (UTC basic format for ICS / Google).
+function icsStamp(date) {
+  return new Date(date)
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
+}
+
+function icsEscape(s) {
+  return String(s || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+
+// Google + Outlook "add event" links. start/end are real UTC Date objects.
+function buildCalendarLinks({ title, start, end, details, location }) {
+  const google =
+    "https://calendar.google.com/calendar/render?" +
+    new URLSearchParams({
+      action: "TEMPLATE",
+      text: title,
+      dates: `${icsStamp(start)}/${icsStamp(end)}`,
+      details: details || "",
+      location: location || "",
+    }).toString();
+
+  const outlook =
+    "https://outlook.office.com/calendar/0/deeplink/compose?" +
+    new URLSearchParams({
+      path: "/calendar/action/compose",
+      rru: "addevent",
+      startdt: new Date(start).toISOString(),
+      enddt: new Date(end).toISOString(),
+      subject: title,
+      body: details || "",
+      location: location || "",
+    }).toString();
+
+  return { google, outlook };
+}
+
+// A valid single-event ICS (Apple Calendar / Outlook desktop / Google import).
+function buildIcs({ title, start, end, details, location, uid }) {
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Nora Health//Appointments//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${icsStamp(new Date())}`,
+    `DTSTART:${icsStamp(start)}`,
+    `DTEND:${icsStamp(end)}`,
+    `SUMMARY:${icsEscape(title)}`,
+    `DESCRIPTION:${icsEscape(details)}`,
+    `LOCATION:${icsEscape(location)}`,
+    "STATUS:CONFIRMED",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
+
+// Email-safe "Add to calendar" block (Google + Outlook buttons + .ics note).
+function calendarButtonsHtml({ google, outlook }) {
+  const btn =
+    "display:inline-block;padding:8px 14px;margin:0 6px 6px 0;border:1px solid #cd8936;border-radius:6px;color:#cd8936;text-decoration:none;font-size:14px;font-weight:bold;";
+  return `
+        <p style="font-weight:bold;color:#cd8936;margin:20px 0 8px;">Add to your calendar</p>
+        <p style="margin:0 0 6px;">
+          <a href="${google}" target="_blank" rel="noopener noreferrer" style="${btn}">Google Calendar</a>
+          <a href="${outlook}" target="_blank" rel="noopener noreferrer" style="${btn}">Outlook</a>
+        </p>
+        <p style="margin:0 0 12px;font-size:13px;color:#555;">
+          Using Apple Calendar or another app? Just open the attached
+          <strong>appointment.ics</strong> file.
+        </p>`;
+}
+
+// Assemble calendar links + ICS + button HTML for a 1-hour appointment slot.
+// `stored` is the wall-clock-in-UTC appointment; `storedEnd` optional.
+function appointmentCalendar({ stored, storedEnd, fullName, whatsappNumber, supportEmail }) {
+  const start = toUtcInstant(stored);
+  const end = storedEnd
+    ? toUtcInstant(storedEnd)
+    : new Date(start.getTime() + 60 * 60 * 1000);
+  const title = "Nora Health appointment";
+  const details =
+    `Your Nora Health contraception call${fullName ? ` for ${fullName}` : ""}. ` +
+    `Nora Health will call you during this 1-hour slot. Need to change or ` +
+    `cancel? WhatsApp ${whatsappNumber} or email ${supportEmail}.`;
+  const location = "Phone call — Nora Health will call you";
+  const links = buildCalendarLinks({ title, start, end, details, location });
+  const ics = buildIcs({
+    title,
+    start,
+    end,
+    details,
+    location,
+    uid: `nora-appt-${start.getTime()}@norahealth.co.uk`,
+  });
+  return {
+    buttonsHtml: calendarButtonsHtml(links),
+    attachment: {
+      filename: "appointment.ics",
+      content: Buffer.from(ics),
+      content_type: "text/calendar; method=PUBLISH; charset=UTF-8",
+    },
+  };
+}
 // export const orderEmailTemplate = ({ medicineName, trackingId, status }) =>
 //    `
 // <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
@@ -235,6 +379,7 @@ export const orderEmailTemplate = ({
   deliveryAddress,
   callDate,
   callTimeSlot,
+  calendarButtons = "",
 }) => {
   const whatsappLink = "https://wa.me/447440126154";
   const supportEmail = "pharmacy.fap80@nhs.net";
@@ -281,6 +426,7 @@ export const orderEmailTemplate = ({
           ${callLine}If there is a specific time that works best for you, feel
           free to tell us and we'll try our best to match it.
         </p>
+        ${calendarButtons}
 
         <p style="font-weight:bold;color:#cd8936;margin-top:20px;">Delivery:</p>
         <p>
@@ -674,6 +820,15 @@ export async function sendBookingConfirmationEmail({
   const whatsappNumber = "+44 7440126154";
   const supportEmail = "pharmacy.fap80@nhs.net";
 
+  // Google/Outlook buttons + .ics attachment for this appointment slot.
+  const cal = appointmentCalendar({
+    stored: appointment,
+    storedEnd: appointmentEnd,
+    fullName,
+    whatsappNumber,
+    supportEmail,
+  });
+
   const html = `
   <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
     <table width="100%" style="max-width:600px;margin:auto;background:#fff;border-radius:6px;border:1px solid #eee;">
@@ -709,6 +864,7 @@ export async function sendBookingConfirmationEmail({
                 : ""
             }
           </table>
+          ${cal.buttonsHtml}
 
           <p style="font-size:13px;color:#555;">
             If you need to change or cancel your appointment, please
@@ -739,6 +895,7 @@ export async function sendBookingConfirmationEmail({
     subject: "Your Appointment Is Confirmed",
     replyTo: "contact@norahealth.co.uk",
     html,
+    attachments: [cal.attachment],
   });
 }
 
@@ -775,12 +932,24 @@ export async function sendOrderBookingConfirmationEmail({
       : "";
   }
 
+  // Add-to-calendar (Google/Outlook buttons + .ics attachment) for the call
+  // slot — only when we actually have an appointment datetime.
+  const cal = appointment
+    ? appointmentCalendar({
+        stored: appointment,
+        fullName,
+        whatsappNumber: "+44 7440126154",
+        supportEmail: "pharmacy.fap80@nhs.net",
+      })
+    : null;
+
   const html = orderEmailTemplate({
     firstName: firstName || firstNameOf(fullName),
     phoneNumber,
     deliveryAddress,
     callDate,
     callTimeSlot,
+    calendarButtons: cal ? cal.buttonsHtml : "",
   });
 
   await resend.emails.send({
@@ -790,6 +959,7 @@ export async function sendOrderBookingConfirmationEmail({
     subject: "Your Contraceptive Order Has Been Received",
     replyTo: "contact@norahealth.co.uk",
     html,
+    ...(cal ? { attachments: [cal.attachment] } : {}),
   });
 }
 
