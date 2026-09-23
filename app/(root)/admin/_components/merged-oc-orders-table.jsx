@@ -211,7 +211,18 @@ function normaliseOrder(o) {
  * any extra unpaired booking/order stays as its own row so nothing is hidden.
  */
 function pairByPatient(bookings, orders) {
-  const ts = (x) => (x?.createdAt ? new Date(x.createdAt).getTime() : 0);
+  // When did each record enter the system? A booking's own createdAt (falling
+  // back to its appointment day) marks when it was made; an order is always
+  // created AFTER the booking it came from — admin runs "Create Order" once the
+  // consultation call is done. So an order can only belong to a booking that
+  // already existed when the order was made.
+  const madeAt = (x) =>
+    x?.createdAt
+      ? new Date(x.createdAt).getTime()
+      : x?.appointment
+      ? new Date(x.appointment).getTime()
+      : 0;
+  const TOL = 60 * 1000; // 1 min grace for clock skew
   const keyOf = (r) => {
     const email = String(r.email || "").trim().toLowerCase();
     if (email && email !== "n/a") return `e:${email}`;
@@ -233,25 +244,55 @@ function pairByPatient(bookings, orders) {
 
   const rows = [];
   for (const [k, g] of groups) {
-    const bs = [...g.bookings].sort((a, b) => ts(a) - ts(b)); // oldest first
-    const os = [...g.orders].sort((a, b) => ts(a) - ts(b));
-    const n = Math.max(bs.length, os.length);
-    for (let i = 0; i < n; i++) {
-      const booking = bs[i] || null;
-      const order = os[i] || null;
-      const primary = booking || order;
+    const bs = [...g.bookings].sort((a, b) => madeAt(a) - madeAt(b)); // oldest first
+    const os = [...g.orders].sort((a, b) => madeAt(a) - madeAt(b));
+
+    // Greedy time-aware pairing (replaces blind booking[i]↔order[i] by index,
+    // which glued a brand-new appointment to a patient's OLD order — issue
+    // #655/#333). For each order, oldest first, grab the LATEST still-free
+    // booking that was created at/before the order. A booking made AFTER an
+    // order is never eligible for it, so a fresh appointment keeps its own date
+    // and shows no order (—) until its own order is created.
+    const usedBooking = new Set();
+    const pairs = []; // { booking, order }
+
+    for (const o of os) {
+      let best = null;
+      let bestIdx = -1;
+      for (let i = 0; i < bs.length; i++) {
+        if (usedBooking.has(i)) continue;
+        if (madeAt(bs[i]) <= madeAt(o) + TOL) {
+          // eligible; keep the one closest before the order
+          if (!best || madeAt(bs[i]) >= madeAt(best)) {
+            best = bs[i];
+            bestIdx = i;
+          }
+        }
+      }
+      if (bestIdx >= 0) usedBooking.add(bestIdx);
+      pairs.push({ booking: best, order: o });
+    }
+
+    // Bookings with no order yet (e.g. a fresh appointment awaiting its order)
+    // stay on their own row so nothing is hidden.
+    for (let i = 0; i < bs.length; i++) {
+      if (!usedBooking.has(i)) pairs.push({ booking: bs[i], order: null });
+    }
+
+    pairs.forEach((p, i) => {
+      const primary = p.booking || p.order;
       rows.push({
         key: `${k}-${i}`,
-        booking,
-        order,
+        booking: p.booking,
+        order: p.order,
         fullName: primary.fullName,
         email: primary.email,
         phoneNumber: primary.phoneNumber,
         userId: primary.userId,
-        appointment: booking?.appointment || null,
-        createdAt: Math.max(ts(booking), ts(order)), // most recent activity
+        appointment: p.booking?.appointment || null,
+        createdAt: Math.max(madeAt(p.booking), madeAt(p.order)), // most recent activity
       });
-    }
+    });
   }
   return rows;
 }
