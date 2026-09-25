@@ -23,11 +23,17 @@ const ConfirmBooking = ({ userDetails }) => {
         .join(" ")
     : "";
 
+  // Prefer what the patient actually typed on the /booking step (carried across
+  // in bookingData). Fall back to their logged-in account details only when a
+  // field was left blank — e.g. the desktop flow collects the name here rather
+  // than on the previous step. Previously this seeded ONLY from the account, so
+  // a booking typed for someone else (e.g. "Jenny Smith") was silently replaced
+  // by the logged-in user's own details on this confirm screen.
   const [form, setForm] = useState({
-    fullName: fullNameFromAccount,
-    email: userDetails?.email || "",
-    phoneNumber: userDetails?.account?.phoneNumber || "",
-    notes: "",
+    fullName: bookingData?.fullName || fullNameFromAccount,
+    email: bookingData?.email || userDetails?.email || "",
+    phoneNumber: bookingData?.phoneNumber || userDetails?.account?.phoneNumber || "",
+    notes: bookingData?.notes || "",
   });
 
   function handleChange(e) {
