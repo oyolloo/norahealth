@@ -10,12 +10,11 @@ import { createBooking } from "@/actions/booking.action";
 import { toast } from "sonner";
 
 const ConfirmBooking = ({ userDetails }) => {
-  const originalSubmitWrapRef = useRef(null);
   const formRef = useRef(null);
-  const [showStickySubmit, setShowStickySubmit] = useState(false);
   const { bookingData } = useBooking();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
 
   const fullNameFromAccount = userDetails?.account
     ? [userDetails.account.firstName, userDetails.account.lastName]
@@ -99,8 +98,8 @@ const ConfirmBooking = ({ userDetails }) => {
         toast.error(res.msg || "Booking failed.");
         return;
       }
-      toast.success("Your appointment has been booked.");
-      router.push("/");
+      // Show the confirmation popup instead of redirecting straight away.
+      setConfirmed(true);
     } catch (err) {
       console.error(err);
       toast.error("Something went wrong while booking.");
@@ -109,42 +108,45 @@ const ConfirmBooking = ({ userDetails }) => {
     }
   }
 
-  useEffect(() => {
-    const mql = window.matchMedia("(max-width: 1023px)");
-
-    const setupObserver = () => {
-      if (!mql.matches) {
-        setShowStickySubmit(false);
-        return;
-      }
-      const target = originalSubmitWrapRef.current;
-      if (!target) return;
-
-      const observer = new IntersectionObserver(
-        ([entry]) => setShowStickySubmit(!entry.isIntersecting),
-        { threshold: 0.1 }
-      );
-      observer.observe(target);
-      return () => observer.disconnect();
-    };
-
-    let cleanup = setupObserver();
-    const onResizeChange = () => {
-      if (cleanup) cleanup();
-      cleanup = setupObserver();
-    };
-    mql.addEventListener?.("change", onResizeChange);
-    window.addEventListener("resize", onResizeChange);
-
-    return () => {
-      if (cleanup) cleanup();
-      mql.removeEventListener?.("change", onResizeChange);
-      window.removeEventListener("resize", onResizeChange);
-    };
-  }, []);
-
   return (
     <section className="py-8">
+      {confirmed && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-[16px] bg-white p-6 text-center shadow-xl">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-green-100">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#16a34a"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-6"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </div>
+            <p className="text-[#3A3D42] mb-2">
+              <span className="font-medium">Date: </span>
+              {formatBookingDate(
+                bookingData?.bookingdate,
+                bookingData?.bookingtime,
+                bookingData?.bookingendtime
+              )}
+            </p>
+            <h3 className="text-[#0D060C] text-lg font-medium mb-5 tracking-[-0.2px]">
+              Your appointment is confirmed &amp; you have been sent an email
+            </h3>
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="w-full bg-theme text-white text-base font-medium py-3 rounded-full hover:bg-[#491F40] transition duration-300 cursor-pointer"
+            >
+              Home
+            </button>
+          </div>
+        </div>
+      )}
       <div className="container custom-container mx-auto sm:px-4 px-[24px]">
         <form onSubmit={handleSubmit} ref={formRef}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 bg-[#FAF9F8] rounded-[12px] p-4 md:p-6 2xl:p-8">
@@ -212,7 +214,6 @@ const ConfirmBooking = ({ userDetails }) => {
                       bookingData?.bookingendtime
                     )}
                   />
-                  <SummaryRow label="Provider:" value="Manor Chemist" />
                   <SummaryRow label="NHS Service:" value="NHS Service" />
                 </div>
 
@@ -220,19 +221,6 @@ const ConfirmBooking = ({ userDetails }) => {
                 <input type="hidden" name="providerName" value="Manor Chemist" />
                 <input type="hidden" name="nhsService" value="NHS Service" />
 
-                <div ref={originalSubmitWrapRef}>
-                  <SubmitButton submitting={submitting} />
-                </div>
-              </div>
-
-              {/* Mobile sticky submit */}
-              <div
-                className={[
-                  "lg:hidden fixed left-0 right-0 bottom-20 sm:bottom-5 z-50 p-3 px-[44px]",
-                  "container custom-container mx-auto",
-                  showStickySubmit ? "block" : "hidden",
-                ].join(" ")}
-              >
                 <SubmitButton submitting={submitting} />
               </div>
             </div>
@@ -247,7 +235,9 @@ const ConfirmBooking = ({ userDetails }) => {
 
 const Input = ({ label, ...props }) => (
   <div className="flex flex-col gap-2">
-    <label className="text-sm text-[#3A3D42] tracking-[-0.2px]">{label}</label>
+    <label className="text-sm text-[#3A3D42] tracking-[-0.2px]">
+      {label} <span className="text-red-500">*</span>
+    </label>
     <input
       {...props}
       required
