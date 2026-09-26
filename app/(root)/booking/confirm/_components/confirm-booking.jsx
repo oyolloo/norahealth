@@ -46,6 +46,16 @@ const ConfirmBooking = ({ userDetails }) => {
     }
   }, [bookingData, router]);
 
+  // Lock background scroll while the confirmation popup is open.
+  useEffect(() => {
+    if (!confirmed) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [confirmed]);
+
   function to12h(timeStr) {
     if (!timeStr) return "";
     const [h, m] = timeStr.split(":").map(Number);
@@ -191,7 +201,7 @@ const ConfirmBooking = ({ userDetails }) => {
 
             {/* RIGHT */}
             <div className="min-w-0 flex flex-col gap-4">
-              <div className="booking-img order-2 lg:order-1 max-[1367px]:max-h-40 overflow-hidden rounded-[16px]">
+              <div className="booking-img max-[1367px]:max-h-40 overflow-hidden rounded-[16px]">
                 <Image
                   src="/images/booking.png"
                   width={370}
@@ -201,28 +211,10 @@ const ConfirmBooking = ({ userDetails }) => {
                 />
               </div>
 
-              <div className="order-1 lg:order-2 bg-[#F4E7E1] rounded-[16px] p-4 2xl:p-6">
-                <h2 className="text-[#0D060C] text-[18px] md:text-[24px] font-medium pb-2 2xl:pb-5 border-b border-[#CE893646] mb-3">
-                  Oral Contraception
-                </h2>
-                <div className="space-y-2 2xl:space-y-4 mb-4">
-                  <SummaryRow
-                    label="Date:"
-                    value={formatBookingDate(
-                      bookingData?.bookingdate,
-                      bookingData?.bookingtime,
-                      bookingData?.bookingendtime
-                    )}
-                  />
-                  <SummaryRow label="NHS Service:" value="NHS Service" />
-                </div>
-
-                <input type="hidden" name="serviceName" value="Oral Contraception" />
-                <input type="hidden" name="providerName" value="Manor Chemist" />
-                <input type="hidden" name="nhsService" value="NHS Service" />
-
-                <SubmitButton submitting={submitting} />
-              </div>
+              {/* Plain Confirm button (the "Oral Contraception" summary box was
+                  removed per client feedback). serviceName/providerName/nhsService
+                  are still sent from handleSubmit, so no hidden inputs are needed. */}
+              <SubmitButton submitting={submitting} />
             </div>
           </div>
         </form>
@@ -259,13 +251,6 @@ const Notes = ({ value, onChange }) => (
       placeholder="Please indicate which contraceptive medicine you are currently on"
       className="border border-[#D9D9D9] rounded-[8px] px-4 pt-[15px] pb-4 text-sm tracking-[-0.2px] text-[#0D060C] placeholder:text-[#3A3D42]/50 w-full outline-none focus:border-[#CE8936] transition resize-none"
     />
-  </div>
-);
-
-const SummaryRow = ({ label, value }) => (
-  <div className="text-[#3A3D42] flex items-start gap-2">
-    <span>{label}</span>
-    <span className="text-[#0D060C] font-medium">{value}</span>
   </div>
 );
 
