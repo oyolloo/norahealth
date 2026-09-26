@@ -201,6 +201,11 @@ const ConfirmBooking = ({ userDetails }) => {
 
             {/* RIGHT */}
             <div className="min-w-0 flex flex-col gap-4">
+              {/* Plain Confirm button, above the banner image (per client
+                  feedback). serviceName/providerName/nhsService are sent from
+                  handleSubmit, so no hidden inputs are needed. */}
+              <SubmitButton submitting={submitting} />
+
               <div className="booking-img max-[1367px]:max-h-40 overflow-hidden rounded-[16px]">
                 <Image
                   src="/images/booking.png"
@@ -210,11 +215,6 @@ const ConfirmBooking = ({ userDetails }) => {
                   className="rounded-[16px] w-full"
                 />
               </div>
-
-              {/* Plain Confirm button (the "Oral Contraception" summary box was
-                  removed per client feedback). serviceName/providerName/nhsService
-                  are still sent from handleSubmit, so no hidden inputs are needed. */}
-              <SubmitButton submitting={submitting} />
             </div>
           </div>
         </form>
