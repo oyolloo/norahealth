@@ -291,15 +291,20 @@ function buildIcs({ title, start, end, details, location, uid }) {
 
 // Email-safe "Add to calendar" block: an "Apple / Other" button (hosted .ics,
 // works with Apple Calendar / Outlook / most apps) and a "Google Calendar"
-// button, each with a small calendar icon.
+// button, each with its real brand logo. The logos are hosted PNGs (Gmail and
+// Outlook don't render SVG or data: URIs in email), sized 2x for retina and
+// shown with alt="" so a blocked image just leaves the text label intact.
 function calendarButtonsHtml({ google, ics }) {
   const btn =
     "display:inline-block;padding:10px 18px;margin:0 8px 8px 0;border:1px solid #cd8936;border-radius:8px;color:#cd8936;text-decoration:none;font-size:14px;font-weight:bold;";
+  const base = "https://www.norahealth.co.uk/images/email";
+  const appleIcon = `<img src="${base}/apple.png" width="13" height="16" alt="" style="vertical-align:middle;margin-right:7px;border:0;" />`;
+  const googleIcon = `<img src="${base}/google-calendar.png" width="16" height="16" alt="" style="vertical-align:middle;margin-right:7px;border:0;" />`;
   return `
         <p style="font-weight:bold;color:#cd8936;margin:20px 0 8px;">You can add this appointment to your calendar</p>
         <p style="margin:0 0 6px;">
-          <a href="${ics}" target="_blank" rel="noopener noreferrer" style="${btn}">&#128197; Apple / Other</a>
-          <a href="${google}" target="_blank" rel="noopener noreferrer" style="${btn}">&#128197; Google Calendar</a>
+          <a href="${ics}" target="_blank" rel="noopener noreferrer" style="${btn}">${appleIcon}Apple / Other</a>
+          <a href="${google}" target="_blank" rel="noopener noreferrer" style="${btn}">${googleIcon}Google Calendar</a>
         </p>
         <p style="margin:0 0 12px;font-size:12px;color:#777;">
           &ldquo;Apple / Other&rdquo; opens a calendar file that works with Apple
