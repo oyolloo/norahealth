@@ -249,7 +249,22 @@ function buildCalendarLinks({ title, start, end, details, location }) {
       location: location || "",
     }).toString();
 
-  return { google, outlook };
+  // "Apple / Other": a hosted .ics link. Clicking it downloads/opens a calendar
+  // file that Apple Calendar, Outlook and most other apps understand. Served by
+  // /api/ics so it works as a normal <a href> in email (an attachment can't be
+  // linked to).
+  const ics =
+    "https://www.norahealth.co.uk/api/ics?" +
+    new URLSearchParams({
+      start: icsStamp(start),
+      end: icsStamp(end),
+      title,
+      details: details || "",
+      location: location || "",
+      uid: `nora-appt-${new Date(start).getTime()}@norahealth.co.uk`,
+    }).toString();
+
+  return { google, outlook, ics };
 }
 
 // A valid single-event ICS (Apple Calendar / Outlook desktop / Google import).
@@ -274,19 +289,21 @@ function buildIcs({ title, start, end, details, location, uid }) {
   ].join("\r\n");
 }
 
-// Email-safe "Add to calendar" block (Google + Outlook buttons + .ics note).
-function calendarButtonsHtml({ google, outlook }) {
+// Email-safe "Add to calendar" block: an "Apple / Other" button (hosted .ics,
+// works with Apple Calendar / Outlook / most apps) and a "Google Calendar"
+// button, each with a small calendar icon.
+function calendarButtonsHtml({ google, ics }) {
   const btn =
-    "display:inline-block;padding:8px 14px;margin:0 6px 6px 0;border:1px solid #cd8936;border-radius:6px;color:#cd8936;text-decoration:none;font-size:14px;font-weight:bold;";
+    "display:inline-block;padding:10px 18px;margin:0 8px 8px 0;border:1px solid #cd8936;border-radius:8px;color:#cd8936;text-decoration:none;font-size:14px;font-weight:bold;";
   return `
-        <p style="font-weight:bold;color:#cd8936;margin:20px 0 8px;">Add to your calendar</p>
+        <p style="font-weight:bold;color:#cd8936;margin:20px 0 8px;">You can add this appointment to your calendar</p>
         <p style="margin:0 0 6px;">
-          <a href="${google}" target="_blank" rel="noopener noreferrer" style="${btn}">Google Calendar</a>
-          <a href="${outlook}" target="_blank" rel="noopener noreferrer" style="${btn}">Outlook</a>
+          <a href="${ics}" target="_blank" rel="noopener noreferrer" style="${btn}">&#128197; Apple / Other</a>
+          <a href="${google}" target="_blank" rel="noopener noreferrer" style="${btn}">&#128197; Google Calendar</a>
         </p>
-        <p style="margin:0 0 12px;font-size:13px;color:#555;">
-          Using Apple Calendar or another app? Just open the attached
-          <strong>appointment.ics</strong> file.
+        <p style="margin:0 0 12px;font-size:12px;color:#777;">
+          &ldquo;Apple / Other&rdquo; opens a calendar file that works with Apple
+          Calendar, Outlook and most apps.
         </p>`;
 }
 
