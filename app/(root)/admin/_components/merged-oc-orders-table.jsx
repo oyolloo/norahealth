@@ -613,7 +613,9 @@ export default function MergedOcOrdersTable() {
               <TableHead>Appointment Date &amp; Time</TableHead>
               <TableHead>Call Status</TableHead>
               <TableHead>Order Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-right sticky right-0 z-20 bg-white shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.12)]">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
 
@@ -695,7 +697,7 @@ export default function MergedOcOrdersTable() {
                         )}
                       </TableCell>
                       <TableCell
-                        className="text-right"
+                        className="text-right sticky right-0 z-10 bg-white shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.12)]"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <RowActions
