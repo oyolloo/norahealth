@@ -431,12 +431,12 @@ export default function AllOrdersTable({
         </div>
       </div>
 
-      {/* EMAIL SEARCH (onChange or button) */}
+      {/* SEARCH — email, patient name, medicine, tracking or order id */}
       <div className='flex items-center py-4 w-full max-w-sm gap-2'>
         <input
           value={emailSearch}
           onChange={(e) => setEmailSearch(e.target.value)}
-          placeholder='Search by email...'
+          placeholder='Search by name, email, tracking or ID...'
           className='w-[260px] bg-white/40 rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200'
         />
         <Button

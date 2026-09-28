@@ -395,8 +395,28 @@ export function UserTable({ users, admin }) {
       },
     },
   ];
+  // Broad text search: match name, email, id, phone or role (not email-only).
+  const [search, setSearch] = React.useState("");
+  const q = search.trim().toLowerCase();
+  const searchedUsers = !q
+    ? users || []
+    : (users || []).filter((u) => {
+        const acc = u?.account || {};
+        return [
+          u?.id,
+          u?.email,
+          u?.secondEmail,
+          u?.role,
+          acc.firstName,
+          acc.lastName,
+          [acc.firstName, acc.lastName].filter(Boolean).join(" "),
+          acc.phoneNumber,
+          u?.phoneNumber,
+        ].some((f) => String(f ?? "").toLowerCase().includes(q));
+      });
+
   const table = useReactTable({
-    data: users || [],
+    data: searchedUsers,
     admin: admin,
     columns,
     onSortingChange: setSorting,
@@ -477,11 +497,9 @@ export function UserTable({ users, admin }) {
         </div>
         <div className='flex items-center w-full sm:flex-1'>
           <input
-            value={table.getColumn("email")?.getFilterValue() ?? ""}
-            onChange={(e) =>
-              table.getColumn("email")?.setFilterValue(e.target.value)
-            }
-            placeholder='Search by email...'
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder='Search by name, email, phone or ID...'
             className='w-full sm:w-[260px] bg-white rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200'
           />
         </div>

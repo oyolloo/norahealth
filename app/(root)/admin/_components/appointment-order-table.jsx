@@ -333,8 +333,20 @@ export default function AppointmentOrderTable() {
     [bookings],
   );
 
+  // Broad text search (name / email / phone / id), not email-only.
+  const [search, setSearch] = useState("");
+  const searchedBookings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return sortedBookings;
+    return sortedBookings.filter((r) =>
+      [r.fullName, r.email, r.phoneNumber, r.id].some((f) =>
+        String(f ?? "").toLowerCase().includes(q)
+      )
+    );
+  }, [sortedBookings, search]);
+
   const table = useReactTable({
-    data: sortedBookings,
+    data: searchedBookings,
     columns,
     state: {
       columnFilters,
@@ -497,7 +509,7 @@ export default function AppointmentOrderTable() {
               setDay("");
               setBookingStatusFilter("ALL");
               table.getColumn("bookingStatus")?.setFilterValue(undefined);
-              table.getColumn("email")?.setFilterValue("");
+              setSearch("");
             }}
           >
             Clear
@@ -508,11 +520,9 @@ export default function AppointmentOrderTable() {
       {/* SEARCH */}
       <div className='flex items-center py-4 w-full max-w-sm '>
         <input
-          value={table.getColumn("email")?.getFilterValue() ?? ""}
-          onChange={(e) =>
-            table.getColumn("email")?.setFilterValue(e.target.value)
-          }
-          placeholder='Search by email...'
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder='Search by name, email, phone or ID...'
           className='w-[260px] bg-white/40 rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200'
         />
       </div>

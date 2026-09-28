@@ -226,11 +226,20 @@ export async function getAllOrdersAction({
       where.status = status; // "clinicalreview" | "posted" | "delivered"
     }
 
-    // Email search filter (relation)
-    if (email && String(email).trim()) {
-      where.user = {
-        email: { contains: String(email).trim(), mode: "insensitive" },
-      };
+    // Search filter — matches email, patient name, medicine, tracking id, or
+    // the order id (numeric). The `email` param name is kept for back-compat.
+    const q = email ? String(email).trim() : "";
+    if (q) {
+      const or = [
+        { user: { email: { contains: q, mode: "insensitive" } } },
+        { user: { account: { firstName: { contains: q, mode: "insensitive" } } } },
+        { user: { account: { lastName: { contains: q, mode: "insensitive" } } } },
+        { medicineName: { contains: q, mode: "insensitive" } },
+        { trackingId: { contains: q, mode: "insensitive" } },
+      ];
+      const n = Number(q);
+      if (Number.isInteger(n) && String(n) === q) or.push({ id: n });
+      where.OR = or;
     }
 
     const safePage = Number.isFinite(Number(page)) ? Number(page) : 0;
