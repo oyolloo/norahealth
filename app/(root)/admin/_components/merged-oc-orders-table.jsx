@@ -468,6 +468,45 @@ export default function MergedOcOrdersTable() {
 
   const COLSPAN = 6; // primary cols: Name, Phone, Appt, Call Status, Order Status, Actions
 
+  // Inline status changes — edit right in the table cell (no dialog). Save on
+  // select, toast "Saved", then refresh the rows.
+  async function handleInlineCallStatus(booking, value) {
+    if (!booking?.id || value === booking.bookingStatus) return;
+    try {
+      const res = await updateBookingStatus({
+        bookingId: booking.id,
+        bookingStatus: value,
+      });
+      if (res?.success) {
+        toast.success("Saved");
+        await fetchAll();
+      } else {
+        toast.error(res?.msg || "Update failed");
+      }
+    } catch {
+      toast.error("Update failed");
+    }
+  }
+
+  async function handleInlineOrderStatus(order, value) {
+    if (!order?.id || value === order.status) return;
+    try {
+      const fd = new FormData();
+      fd.set("orderId", String(order.id));
+      fd.set("trackingId", order.trackingId || "");
+      fd.set("status", value);
+      const res = await updateOrderStatus(null, fd);
+      if (res?.success) {
+        toast.success("Saved");
+        await fetchAll();
+      } else {
+        toast.error(res?.msg || "Update failed");
+      }
+    } catch {
+      toast.error("Update failed");
+    }
+  }
+
   return (
     <div className="w-full p-6 overflow-x-auto">
       {/* HEADER */}
@@ -659,19 +698,87 @@ export default function MergedOcOrdersTable() {
                       <TableCell>
                         <ApptDateTime appointment={r.appointment} />
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         {r.booking ? (
-                          <BookingStatusBadge value={r.booking.bookingStatus} />
+                          <Select
+                            value={r.booking.bookingStatus || "Incomplete"}
+                            onValueChange={(v) =>
+                              handleInlineCallStatus(r.booking, v)
+                            }
+                          >
+                            <SelectTrigger
+                              aria-label="Change call status"
+                              className="h-auto w-fit gap-1 border-0 bg-transparent p-0 shadow-none focus:ring-0 focus-visible:ring-0 cursor-pointer [&>svg]:size-3.5 [&>svg]:opacity-50"
+                            >
+                              <BookingStatusBadge value={r.booking.bookingStatus} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Incomplete">
+                                <BookingStatusBadge value="Incomplete" />
+                              </SelectItem>
+                              <SelectItem value="FirstCallAttempted">
+                                <BookingStatusBadge value="FirstCallAttempted" />
+                              </SelectItem>
+                              <SelectItem value="SecondCallAttempted">
+                                <BookingStatusBadge value="SecondCallAttempted" />
+                              </SelectItem>
+                              <SelectItem value="Complete">
+                                <BookingStatusBadge value="Complete" />
+                              </SelectItem>
+                              <SelectItem value="FailedEncounter">
+                                <BookingStatusBadge value="FailedEncounter" />
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         {r.order ? (
-                          <OrderStatusPill
-                            status={r.order.status}
-                            trackingId={r.order.trackingId}
-                          />
+                          <div className="flex flex-col gap-1">
+                            <Select
+                              value={r.order.status || "clinicalreview"}
+                              onValueChange={(v) =>
+                                handleInlineOrderStatus(r.order, v)
+                              }
+                            >
+                              <SelectTrigger
+                                aria-label="Change order status"
+                                className="h-auto w-fit gap-1 border-0 bg-transparent p-0 shadow-none focus:ring-0 focus-visible:ring-0 cursor-pointer [&>svg]:size-3.5 [&>svg]:opacity-50"
+                              >
+                                <OrderStatusPill
+                                  status={r.order.status}
+                                  trackingId={null}
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="clinicalreview">
+                                  <OrderStatusPill
+                                    status="clinicalreview"
+                                    trackingId={null}
+                                  />
+                                </SelectItem>
+                                <SelectItem value="posted">
+                                  <OrderStatusPill
+                                    status="posted"
+                                    trackingId={null}
+                                  />
+                                </SelectItem>
+                                <SelectItem value="declined">
+                                  <OrderStatusPill
+                                    status="declined"
+                                    trackingId={null}
+                                  />
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {r.order.status === "posted" && r.order.trackingId ? (
+                              <span className="whitespace-nowrap text-xs text-muted-foreground">
+                                Tracking ID: {r.order.trackingId}
+                              </span>
+                            ) : null}
+                          </div>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
