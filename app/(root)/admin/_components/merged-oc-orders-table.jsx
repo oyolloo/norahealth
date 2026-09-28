@@ -466,7 +466,7 @@ export default function MergedOcOrdersTable() {
   ];
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
-  const COLSPAN = 7; // primary cols: expand, Name, Phone, Appt, Call Status, Order Status, Actions
+  const COLSPAN = 6; // primary cols: Name, Phone, Appt, Call Status, Order Status, Actions
 
   return (
     <div className="w-full p-6 overflow-x-auto">
@@ -607,15 +607,12 @@ export default function MergedOcOrdersTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-8" />
               <TableHead>Full Name</TableHead>
               <TableHead>Contact Number</TableHead>
-              <TableHead>Appointment Date &amp; Time</TableHead>
+              <TableHead>Appointment Time</TableHead>
               <TableHead>Call Status</TableHead>
               <TableHead>Order Status</TableHead>
-              <TableHead className="text-right sticky right-0 z-20 bg-white shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.12)]">
-                Actions
-              </TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -643,23 +640,6 @@ export default function MergedOcOrdersTable() {
                       data-state={isOpen ? "selected" : undefined}
                       onClick={() => toggleExpanded(r.key)}
                     >
-                      <TableCell className="w-8">
-                        <button
-                          type="button"
-                          aria-label={isOpen ? "Collapse" : "Expand"}
-                          className="grid size-6 place-items-center rounded hover:bg-black/5"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleExpanded(r.key);
-                          }}
-                        >
-                          {isOpen ? (
-                            <ChevronDown className="size-4" />
-                          ) : (
-                            <ChevronRight className="size-4" />
-                          )}
-                        </button>
-                      </TableCell>
                       <TableCell>
                         {r.userId ? (
                           <Link
@@ -697,7 +677,7 @@ export default function MergedOcOrdersTable() {
                         )}
                       </TableCell>
                       <TableCell
-                        className="text-right sticky right-0 z-10 bg-white shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.12)]"
+                        className="text-right"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <RowActions
