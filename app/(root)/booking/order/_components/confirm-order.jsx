@@ -11,8 +11,8 @@ import AppointmentPicker from "../../_components/appointment-picker";
 
 const STEPS = [
   { key: "details", title: "Step 1: Check your details" },
-  { key: "appointment", title: "Step 2: Book your appointment" },
-  { key: "help", title: "Step 3: How can we help you?" },
+  { key: "help", title: "Step 2: How can we help you?" },
+  { key: "appointment", title: "Step 3: Book your appointment" },
 ];
 
 const OC_OPTIONS = [
