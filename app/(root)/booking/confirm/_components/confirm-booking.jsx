@@ -1,7 +1,7 @@
 "use client";
 
 import { useBooking } from "@/lib/BookingContext";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useState, useRef } from "react";
@@ -121,8 +121,24 @@ const ConfirmBooking = ({ userDetails }) => {
   return (
     <section className="py-8">
       {confirmed && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-[16px] bg-white p-6 text-center shadow-xl">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => router.push("/")}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-[16px] bg-white p-6 text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Per client: no separate Home button — closing the popup (the X, or
+                tapping outside) is what takes the patient back to the home page. */}
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => router.push("/")}
+              className="absolute right-4 top-4 text-[#3A3D42] hover:text-[#0D060C] transition cursor-pointer"
+            >
+              <X className="size-5" strokeWidth={1.8} />
+            </button>
             <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-green-100">
               <svg
                 viewBox="0 0 24 24"
@@ -144,16 +160,9 @@ const ConfirmBooking = ({ userDetails }) => {
                 bookingData?.bookingendtime
               )}
             </p>
-            <h3 className="text-[#0D060C] text-lg font-medium mb-5 tracking-[-0.2px]">
+            <h3 className="text-[#0D060C] text-lg font-medium tracking-[-0.2px]">
               Your appointment is confirmed &amp; you have been sent an email
             </h3>
-            <button
-              type="button"
-              onClick={() => router.push("/")}
-              className="w-full bg-theme text-white text-base font-medium py-3 rounded-full hover:bg-[#491F40] transition duration-300 cursor-pointer"
-            >
-              Home
-            </button>
           </div>
         </div>
       )}
