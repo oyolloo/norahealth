@@ -70,7 +70,6 @@ export function UserTable({ users, admin }) {
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
   const [rowSelection, setRowSelection] = React.useState({});
-  console.log(users, "userTable");
 
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -396,8 +395,11 @@ export function UserTable({ users, admin }) {
     },
   ];
   // Broad text search: match name, email, id, phone or role (not email-only).
+  // Defer the query so typing stays responsive and the big list re-render is
+  // deprioritised (React keeps the input snappy while the table catches up).
   const [search, setSearch] = React.useState("");
-  const q = search.trim().toLowerCase();
+  const deferredSearch = React.useDeferredValue(search);
+  const q = deferredSearch.trim().toLowerCase();
   const searchedUsers = !q
     ? users || []
     : (users || []).filter((u) => {

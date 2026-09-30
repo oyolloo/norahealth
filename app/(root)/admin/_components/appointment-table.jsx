@@ -424,8 +424,6 @@ export default function AppointmentOrderTable() {
 
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
-  console.log("bookings", bookings);
-  
 
   return (
     <div className='w-full p-6'>
