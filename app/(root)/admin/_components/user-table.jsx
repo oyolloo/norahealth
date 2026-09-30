@@ -406,22 +406,28 @@ export function UserTable({ users, admin }) {
     return () => clearTimeout(id);
   }, [searchInput]);
   const q = search.trim().toLowerCase();
-  const searchedUsers = !q
-    ? users || []
-    : (users || []).filter((u) => {
-        const acc = u?.account || {};
-        return [
-          u?.id,
-          u?.email,
-          u?.secondEmail,
-          u?.role,
-          acc.firstName,
-          acc.lastName,
-          [acc.firstName, acc.lastName].filter(Boolean).join(" "),
-          acc.phoneNumber,
-          u?.phoneNumber,
-        ].some((f) => String(f ?? "").toLowerCase().includes(q));
-      });
+  // Memoise the filtered list. Passing a brand-new array to the table's `data`
+  // on every render makes TanStack's auto-reset (page index) fire each render,
+  // which triggers a state update -> re-render -> new array -> reset again, i.e.
+  // an infinite render loop (only when a query produced a fresh filtered array).
+  // A stable reference that only changes when `users`/`q` change breaks it.
+  const searchedUsers = React.useMemo(() => {
+    if (!q) return users || [];
+    return (users || []).filter((u) => {
+      const acc = u?.account || {};
+      return [
+        u?.id,
+        u?.email,
+        u?.secondEmail,
+        u?.role,
+        acc.firstName,
+        acc.lastName,
+        [acc.firstName, acc.lastName].filter(Boolean).join(" "),
+        acc.phoneNumber,
+        u?.phoneNumber,
+      ].some((f) => String(f ?? "").toLowerCase().includes(q));
+    });
+  }, [users, q]);
 
   const table = useReactTable({
     data: searchedUsers,
