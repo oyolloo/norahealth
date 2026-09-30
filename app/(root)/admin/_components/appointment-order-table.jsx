@@ -333,8 +333,15 @@ export default function AppointmentOrderTable() {
     [bookings],
   );
 
-  // Broad text search (name / email / phone / id), not email-only.
+  // Broad text search (name / email / phone / id), not email-only. Debounced:
+  // the box updates instantly, the filter runs ~300ms after typing stops so the
+  // large table doesn't re-render on every keystroke.
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
   const searchedBookings = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return sortedBookings;
@@ -509,7 +516,7 @@ export default function AppointmentOrderTable() {
               setDay("");
               setBookingStatusFilter("ALL");
               table.getColumn("bookingStatus")?.setFilterValue(undefined);
-              setSearch("");
+              setSearchInput("");
             }}
           >
             Clear
@@ -520,8 +527,8 @@ export default function AppointmentOrderTable() {
       {/* SEARCH */}
       <div className='flex items-center py-4 w-full max-w-sm '>
         <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           placeholder='Search by name, email, phone or ID...'
           className='w-[260px] bg-white/40 rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200'
         />

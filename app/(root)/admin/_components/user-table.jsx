@@ -395,11 +395,17 @@ export function UserTable({ users, admin }) {
     },
   ];
   // Broad text search: match name, email, id, phone or role (not email-only).
-  // Defer the query so typing stays responsive and the big list re-render is
-  // deprioritised (React keeps the input snappy while the table catches up).
+  // Debounced: `searchInput` updates the box on every keystroke, but the actual
+  // filter (`search`) only runs ~300ms after the user pauses. This keeps the
+  // 1000+ row table DOM stable while typing, which also stops the page-level
+  // Google Translate widget from re-processing the table on every keystroke.
+  const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const deferredSearch = React.useDeferredValue(search);
-  const q = deferredSearch.trim().toLowerCase();
+  React.useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
+  const q = search.trim().toLowerCase();
   const searchedUsers = !q
     ? users || []
     : (users || []).filter((u) => {
@@ -499,8 +505,8 @@ export function UserTable({ users, admin }) {
         </div>
         <div className='flex items-center w-full sm:flex-1'>
           <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder='Search by name, email, phone or ID...'
             className='w-full sm:w-[260px] bg-white rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200'
           />
