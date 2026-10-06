@@ -443,6 +443,28 @@ body {
   
   transform: translateY(0);
 }
+/* Mobile calendar optimization — slimmer for time-slot visibility */
+@media (max-width: 768px) {
+  .react-calendar__tile {
+    font-size: 13px !important;
+    padding: 2% 0 !important;
+  }
+  .react-calendar__month-view__weekdays {
+    font-size: 11px !important;
+    margin-top: 10px !important;
+    margin-bottom: 8px !important;
+  }
+  .react-calendar__month-view__days {
+    gap: 3px !important;
+    margin: 0 3px !important;
+    margin-top: 10px !important;
+    margin-bottom: 8px !important;
+  }
+  .react-calendar__navigation {
+    margin-bottom: 8px !important;
+  }
+}
+
 /* Multi-step booking form — step transition */
 @keyframes stepFadeIn {
   from {

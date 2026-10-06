@@ -6,7 +6,7 @@ import {
 } from "@/actions/bookingSlot.action";
 import { useBooking } from "@/lib/BookingContext";
 import { useRouter } from "next/navigation";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import Calendar from "react-calendar";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ export default function BookingCalander() {
   const router = useRouter();
   const { bookingData, setBookingData } = useBooking();
   const [nowTick, setNowTick] = useState(Date.now());
+  const timeSlotsSectionRef = useRef(null);
 
 
   useEffect(() => {
@@ -122,6 +123,9 @@ function currentMinutes() {
   function onDateChange(d) {
     setValue(d);
     setSelectedSlot(null);
+    setTimeout(() => {
+      timeSlotsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   }
 
   function extractStartTime(slotId) {
@@ -199,19 +203,19 @@ const visibleSlots = useMemo(() => {
   return (
     <div className='bg-[#f4e7e1] rounded-2xl overflow-hidden flex flex-col md:flex-row h-full'>
       {/* Left: react-calendar */}
-      <div className='max-w-[730px] w-full p-6 bg-[#faf9f8] rounded-2xl'>
+      <div className='max-w-[730px] w-full p-3 md:p-6 bg-[#faf9f8] rounded-2xl'>
         <div className='calendar-wrapper'>
           <Calendar
             onChange={onDateChange}
             value={value}
             tileDisabled={tileDisabled}
-            className='react-calendar-custom w-full border-0'
+            className='react-calendar-custom w-full border-0 text-sm md:text-base'
           />
         </div>
       </div>
 
       {/* Right: Time slots */}
-      <aside className='max-w-100 lg:max-w-82.5 w-full bg-[#f4e7e1] p-[24px_16px] lg:p-[40px_50px]'>
+      <aside ref={timeSlotsSectionRef} className='max-w-100 lg:max-w-82.5 w-full bg-[#f4e7e1] p-[24px_16px] lg:p-[40px_50px]'>
         <div className='mb-4'>
           <div className='text-[18px] font-medium text-[#2B3244] text-center'>
             {value.toLocaleDateString(undefined, {
