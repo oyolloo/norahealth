@@ -305,7 +305,7 @@ export default function BookingsMobile() {
           style={{ display: step === 0 ? 'none' : 'block' }}
         >
           {/* Header with back button and date title */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 mb-4">
             {step === 1 && (
               <button
                 type="button"
@@ -352,7 +352,7 @@ export default function BookingsMobile() {
                         : undefined
                     }
                     className={[
-                      "h-[38px] px-2 rounded-[8px] flex items-center justify-center text-[12px] text-center tracking-[-0.2px] transition",
+                      "h-[38px] px-1 rounded-[8px] flex items-center justify-center text-[12px] text-center tracking-[-0.2px] transition",
                       disabled
                         ? "bg-[#EBDAD2] text-[#A3A3A3] line-through cursor-not-allowed"
                         : active
