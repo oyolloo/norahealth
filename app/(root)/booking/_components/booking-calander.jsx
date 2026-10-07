@@ -15,6 +15,7 @@ export default function BookingCalander() {
   const { bookingData, setBookingData } = useBooking();
   const [nowTick, setNowTick] = useState(Date.now());
   const timeSlotsSectionRef = useRef(null);
+  const [step, setStep] = useState(0);
 
 
   useEffect(() => {
@@ -123,9 +124,15 @@ function currentMinutes() {
   function onDateChange(d) {
     setValue(d);
     setSelectedSlot(null);
+    setStep(1);
     setTimeout(() => {
       timeSlotsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 0);
+  }
+
+  function handleBackToCalendar() {
+    setStep(0);
+    setSelectedSlot(null);
   }
 
   function extractStartTime(slotId) {
@@ -203,7 +210,7 @@ const visibleSlots = useMemo(() => {
   return (
     <div className='bg-[#f4e7e1] rounded-2xl overflow-hidden flex flex-col md:flex-row h-full'>
       {/* Left: react-calendar */}
-      <div className='max-w-[730px] w-full p-3 md:p-6 bg-[#faf9f8] rounded-2xl'>
+      <div className={`step-slide-container max-w-[730px] w-full p-3 md:p-6 bg-[#faf9f8] rounded-2xl transition-all duration-300 ${step === 1 ? 'hidden md:block' : 'block'}`}>
         <div className='calendar-wrapper'>
           <Calendar
             onChange={onDateChange}
@@ -215,7 +222,15 @@ const visibleSlots = useMemo(() => {
       </div>
 
       {/* Right: Time slots */}
-      <aside ref={timeSlotsSectionRef} className='max-w-100 lg:max-w-82.5 w-full bg-[#f4e7e1] p-[24px_16px] lg:p-[40px_50px]'>
+      <aside ref={timeSlotsSectionRef} className={`step-slide-container max-w-100 lg:max-w-82.5 w-full bg-[#f4e7e1] p-4 md:p-[40px_50px] transition-all duration-300 ${step === 0 ? 'hidden md:block' : 'block md:block'}`}>
+        {step === 1 && (
+          <button
+            onClick={handleBackToCalendar}
+            className='mb-4 md:hidden flex items-center gap-2 text-sm font-medium text-[#2B3244] hover:text-[#1a1a1a] transition'
+          >
+            <span>←</span> Change date
+          </button>
+        )}
         <div className='mb-4'>
           <div className='text-[18px] font-medium text-[#2B3244] text-center'>
             {value.toLocaleDateString(undefined, {
