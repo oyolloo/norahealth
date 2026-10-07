@@ -465,6 +465,35 @@ body {
   }
 }
 
+/* Multi-step slide animation for mobile */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@media (max-width: 768px) {
+  .step-slide-container.block {
+    animation: slideInRight 0.3s ease-out;
+  }
+}
+
 /* Multi-step booking form — step transition */
 @keyframes stepFadeIn {
   from {
