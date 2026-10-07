@@ -313,7 +313,7 @@ export default function BookingsMobile() {
               <span>←</span> Change date
             </button>
           )}
-          <p className="text-center text-[18px] leading-[27px] font-medium text-[#2B3244] tracking-[-0.3px]">
+          <p className="text-center text-[18px] leading-[27px] font-medium text-[#2B3244] tracking-[-0.3px] mb-4">
             {dayLabel}
           </p>
 
