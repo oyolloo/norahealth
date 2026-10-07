@@ -489,7 +489,14 @@ body {
 }
 
 @media (max-width: 768px) {
+  .step-slide-container {
+    transition: all 0.3s ease-out;
+  }
+  .step-slide-container.hidden {
+    display: none !important;
+  }
   .step-slide-container.block {
+    display: block;
     animation: slideInRight 0.3s ease-out;
   }
 }
