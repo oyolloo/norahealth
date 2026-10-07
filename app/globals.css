@@ -179,7 +179,7 @@ h6 {
 
   @media (max-width: 767px) {
     .section-padding {
-      @apply py-[60px];
+      @apply py-[30px];
     }
   }
 
