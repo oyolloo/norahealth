@@ -305,21 +305,20 @@ export default function BookingsMobile() {
           style={{ display: step === 0 ? 'none' : 'block' }}
         >
           {/* Header with back button and date title */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             {step === 1 && (
               <button
                 type="button"
                 onClick={handleBackToCalendar}
-                className="text-[#2B3244] hover:text-[#1a1a1a] transition cursor-pointer text-lg"
+                className="text-[#2B3244] hover:text-[#1a1a1a] transition cursor-pointer text-lg flex-shrink-0"
                 aria-label="Back to calendar"
               >
                 ←
               </button>
             )}
-            <p className="flex-1 text-center text-[18px] leading-[27px] font-medium text-[#2B3244] tracking-[-0.3px]">
+            <p className="text-right text-[18px] leading-[27px] font-medium text-[#2B3244] tracking-[-0.3px]">
               {dayLabel}
             </p>
-            <div className="w-6" />
           </div>
 
           {!selectedIsBookable ? (
