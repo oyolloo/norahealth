@@ -196,7 +196,7 @@ export default function BookingsMobile() {
   }
 
   return (
-    <div className="flex flex-col gap-6 py-[30px]">
+    <div className="flex flex-col gap-6">
       <h2 className="text-[20px] leading-[27px] font-semibold text-[#0D060C] tracking-[-0.3px]">
         Book a free appointment in just a few clicks
       </h2>
