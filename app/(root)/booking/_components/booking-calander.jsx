@@ -88,6 +88,10 @@ function currentMinutes() {
   const [timeSlots, setTimeSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  useEffect(() => {
+    console.log('Step changed to:', step);
+  }, [step]);
+
   function isSameDay(a, b) {
     if (!a || !b) return false;
     return (
@@ -122,10 +126,14 @@ function currentMinutes() {
   }
 
   function onDateChange(d) {
+    console.log('onDateChange called with date:', d);
     setValue(d);
     setSelectedSlot(null);
+    console.log('About to setStep(1)');
     setStep(1);
+    console.log('setStep(1) called');
     setTimeout(() => {
+      console.log('Timeout fired, scrolling to time slots');
       timeSlotsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 0);
   }

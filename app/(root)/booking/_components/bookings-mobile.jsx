@@ -62,6 +62,7 @@ export default function BookingsMobile() {
   const [bookableStrings, setBookableStrings] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [step, setStep] = useState(0); // 0: calendar, 1: time slots
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -156,6 +157,11 @@ export default function BookingsMobile() {
     view.year === today.getFullYear() && view.month <= today.getMonth()
   );
 
+  function handleBackToCalendar() {
+    setStep(0);
+    setSelectedSlot(null);
+  }
+
   const isToday = isSameDay(selectedDate, today);
   const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
   const slots = useMemo(
@@ -225,7 +231,10 @@ export default function BookingsMobile() {
       {/* Calendar + slots block */}
       <div className="bg-[#F4E7E1] rounded-[12px] p-4 flex flex-col gap-6">
         {/* Month calendar card */}
-        <div className="mx-auto w-full max-w-[342px] bg-[#FAF9F8] rounded-[16px] p-4">
+        <div
+          className="mx-auto w-full max-w-[342px] bg-[#FAF9F8] rounded-[16px] p-4 transition-all duration-300"
+          style={{ display: step === 1 ? 'none' : 'block' }}
+        >
           <div className="flex flex-col gap-[15px]">
             <div className="flex items-center justify-between">
               <button
@@ -271,6 +280,7 @@ export default function BookingsMobile() {
                     onClick={() => {
                       setSelectedDate(d);
                       setSelectedSlot(null);
+                      setStep(1);
                     }}
                     className={[
                       "size-[31px] mx-auto grid place-items-center rounded-[2.5px] text-[9px] leading-[14px] transition",
@@ -290,7 +300,19 @@ export default function BookingsMobile() {
         </div>
 
         {/* Day label + slots */}
-        <div className="mx-auto w-full max-w-[326px] flex flex-col gap-6">
+        <div
+          className="mx-auto w-full max-w-[326px] flex flex-col gap-6 transition-all duration-300"
+          style={{ display: step === 0 ? 'none' : 'block' }}
+        >
+          {step === 1 && (
+            <button
+              type="button"
+              onClick={handleBackToCalendar}
+              className="flex items-center gap-2 text-sm font-medium text-[#2B3244] hover:text-[#1a1a1a] transition mb-2"
+            >
+              <span>←</span> Change date
+            </button>
+          )}
           <p className="text-center text-[18px] leading-[27px] font-medium text-[#2B3244] tracking-[-0.3px]">
             {dayLabel}
           </p>
