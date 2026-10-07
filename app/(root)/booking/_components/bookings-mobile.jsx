@@ -310,10 +310,10 @@ export default function BookingsMobile() {
               <button
                 type="button"
                 onClick={handleBackToCalendar}
-                className="text-[#2B3244] hover:text-[#1a1a1a] transition cursor-pointer text-lg flex-shrink-0"
+                className="text-[#2B3244] hover:text-[#1a1a1a] transition cursor-pointer flex-shrink-0"
                 aria-label="Back to calendar"
               >
-                ←
+                <ChevronLeft className="size-6" strokeWidth={2} />
               </button>
             )}
             <p className="text-right text-[18px] leading-[27px] font-medium text-[#2B3244] tracking-[-0.3px]">
