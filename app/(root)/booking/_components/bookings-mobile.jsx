@@ -301,21 +301,26 @@ export default function BookingsMobile() {
 
         {/* Day label + slots */}
         <div
-          className="mx-auto w-full max-w-[326px] flex flex-col gap-6 transition-all duration-300"
+          className="mx-auto w-full max-w-[342px] bg-[#FAF9F8] rounded-[16px] p-4 flex flex-col gap-[15px] transition-all duration-300"
           style={{ display: step === 0 ? 'none' : 'block' }}
         >
-          {step === 1 && (
-            <button
-              type="button"
-              onClick={handleBackToCalendar}
-              className="flex items-center gap-2 text-sm font-medium text-[#2B3244] hover:text-[#1a1a1a] transition mb-2"
-            >
-              <span>←</span> Change date
-            </button>
-          )}
-          <p className="text-center text-[18px] leading-[27px] font-medium text-[#2B3244] tracking-[-0.3px] mb-4">
-            {dayLabel}
-          </p>
+          {/* Header with back button and date title */}
+          <div className="flex items-center justify-between">
+            {step === 1 && (
+              <button
+                type="button"
+                onClick={handleBackToCalendar}
+                className="text-[#2B3244] hover:text-[#1a1a1a] transition cursor-pointer text-lg"
+                aria-label="Back to calendar"
+              >
+                ←
+              </button>
+            )}
+            <p className="flex-1 text-center text-[18px] leading-[27px] font-medium text-[#2B3244] tracking-[-0.3px]">
+              {dayLabel}
+            </p>
+            <div className="w-6" />
+          </div>
 
           {!selectedIsBookable ? (
             <p className="text-center text-xs text-[#6B7280]">
