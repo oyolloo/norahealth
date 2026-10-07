@@ -210,7 +210,10 @@ const visibleSlots = useMemo(() => {
   return (
     <div className='bg-[#f4e7e1] rounded-2xl overflow-hidden flex flex-col md:flex-row h-full'>
       {/* Left: react-calendar */}
-      <div className={`step-slide-container max-w-[730px] w-full p-3 md:p-6 bg-[#faf9f8] rounded-2xl transition-all duration-300 ${step === 1 ? 'hidden' : 'block'} md:block`}>
+      <div
+        className='step-slide-container max-w-[730px] w-full p-3 md:p-6 bg-[#faf9f8] rounded-2xl transition-all duration-300 md:block'
+        style={{ display: step === 1 ? 'none' : 'block' }}
+      >
         <div className='calendar-wrapper'>
           <Calendar
             onChange={onDateChange}
@@ -222,7 +225,11 @@ const visibleSlots = useMemo(() => {
       </div>
 
       {/* Right: Time slots */}
-      <aside ref={timeSlotsSectionRef} className={`step-slide-container max-w-100 lg:max-w-82.5 w-full bg-[#f4e7e1] p-4 md:p-[40px_50px] transition-all duration-300 ${step === 0 ? 'hidden' : 'block'} md:block`}>
+      <aside
+        ref={timeSlotsSectionRef}
+        className='step-slide-container max-w-100 lg:max-w-82.5 w-full bg-[#f4e7e1] p-4 md:p-[40px_50px] transition-all duration-300 md:block'
+        style={{ display: step === 0 ? 'none' : 'block' }}
+      >
         {step === 1 && (
           <button
             onClick={handleBackToCalendar}
