@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import cloudinary from "@/lib/cloudinary";
 import { resend } from "@/lib/reset";
 import { sendWelcomeEmail } from "@/lib/emailTemplate";
+import { resetPasswordEmailHtml } from "@/lib/emailHtml";
 import { randomBytes, createHash } from "node:crypto"; // ✅ IMPORTANT
 
 // Parse a "yyyy-MM-dd" date input to a UTC-noon Date (avoids timezone drift).
@@ -808,11 +809,7 @@ const tokenHash = createHash("sha256").update(rawToken).digest("hex");
       from: process.env.RESEND_FROM,
       to: user.email,
       subject: "Reset your password",
-      html: `
-        <p>Click to reset your password (valid for <b>15 minutes</b>):</p>
-        <p><a href="${resetUrl}">Reset Password</a></p>
-        <p>If you didn't request this, ignore this email.</p>
-      `,
+      html: resetPasswordEmailHtml({ resetUrl }),
       text: `Reset your password (valid for 15 minutes): ${resetUrl}`,
     });
 
