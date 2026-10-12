@@ -14,11 +14,16 @@ export async function getAnalyticsAction(range = "month") {
 
   let firstUk = ukNow;
   if (range === "all") {
-    const first = await prisma.booking.findFirst({
-      orderBy: { createdAt: "asc" },
-      select: { createdAt: true },
-    });
-    if (first) firstUk = toUk(first.createdAt);
+    const oldest = { orderBy: { createdAt: "asc" }, select: { createdAt: true } };
+    const firsts = (
+      await Promise.all([
+        prisma.booking.findFirst(oldest),
+        prisma.order.findFirst(oldest),
+        prisma.user.findFirst({ ...oldest, where: { role: "PATIENT" } }),
+      ])
+    ).filter(Boolean);
+    if (firsts.length)
+      firstUk = toUk(new Date(Math.min(...firsts.map((f) => new Date(f.createdAt).getTime()))));
   }
 
   const win = rangeWindow(range, ukNow, firstUk);

@@ -54,6 +54,7 @@ export default function BarChart({ data, keys, height = 240, unitLabel }) {
       ref={wrap}
       className="relative w-full select-none"
       style={{ minHeight: height }}
+      onTouchEnd={() => setTimeout(() => setHover(null), 2500)}
     >
       {width > 0 && (
         <svg width={width} height={height} role="img" aria-label={unitLabel}>
