@@ -69,6 +69,7 @@ import {
   getAllOrdersAction,
   updateOrderStatus,
 } from "@/actions/order.action";
+import { ocTypeLabel } from "@/lib/ocType";
 
 /* ---------- expandable-row detail field ---------- */
 function DetailField({ label, value }) {
@@ -466,7 +467,7 @@ export default function MergedOcOrdersTable() {
   ];
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
-  const COLSPAN = 6; // primary cols: Name, Phone, Appt, Call Status, Order Status, Actions
+  const COLSPAN = 7; // primary cols: Name, Phone, Appt, Type, Call Status, Order Status, Actions
 
   // Inline status changes — edit right in the table cell (no dialog). Save on
   // select, toast "Saved", then refresh the rows.
@@ -649,6 +650,7 @@ export default function MergedOcOrdersTable() {
               <TableHead>Full Name</TableHead>
               <TableHead>Contact Number</TableHead>
               <TableHead>Appointment Time</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Call Status</TableHead>
               <TableHead>Order Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -679,7 +681,7 @@ export default function MergedOcOrdersTable() {
                       data-state={isOpen ? "selected" : undefined}
                       onClick={() => toggleExpanded(r.key)}
                     >
-                      <TableCell>
+                      <TableCell className="whitespace-normal max-w-[140px]">
                         {r.userId ? (
                           <Link
                             href={`/admin/${r.userId}/orders`}
@@ -697,6 +699,9 @@ export default function MergedOcOrdersTable() {
                       </TableCell>
                       <TableCell>
                         <ApptDateTime appointment={r.appointment} />
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">
+                        {ocTypeLabel(r.booking?._raw?.ocRequest) || "—"}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {r.booking ? (
@@ -832,7 +837,10 @@ export default function MergedOcOrdersTable() {
                             <DetailField label="Email" value={r.email} />
                             <DetailField
                               label="Medicine"
-                              value={r.order?.medicineName}
+                              value={
+                                r.order?.medicineName ||
+                                ocTypeLabel(r.booking?._raw?.ocRequest)
+                              }
                             />
                             <DetailField
                               label="Tracking ID"
