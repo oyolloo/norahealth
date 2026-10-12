@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { orderFromBookingEmailTemplate, sendBookingConfirmationEmail, sendOrderBookingConfirmationEmail } from "@/lib/emailTemplate";
 import { createRoyalMailOrder, isRoyalMailConfigured } from "@/lib/royalMail";
 import { Resend } from "resend";
+import { getAdminUser } from "./admin.action";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -1237,3 +1238,41 @@ export async function updateBookingStatus(formDataOrObj) {
   }
 }
 
+
+export async function getPatientAppointmentsAction(userId) {
+  // getAdminUser() returns null for anyone who is not ADMIN/SUPERADMIN.
+  const admin = await getAdminUser();
+  if (!admin) {
+    return { success: false, msg: "Unauthorized. User is not admin" };
+  }
+
+  const id = Number(userId);
+  if (!Number.isInteger(id)) return { success: false, msg: "Patient not found" };
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      email: true,
+      account: { select: { firstName: true, lastName: true, dob: true } },
+    },
+  });
+  if (!user) return { success: false, msg: "Patient not found" };
+
+  // Bookings carry no userId; they belong to a patient only through email.
+  const bookings = await prisma.booking.findMany({
+    where: { email: { equals: user.email, mode: "insensitive" } },
+    orderBy: { appointment: "desc" },
+    select: {
+      id: true,
+      appointment: true,
+      phoneNumber: true,
+      ocRequest: true,
+      bookingStatus: true,
+      bookingType: true,
+      slot: { select: { startTime: true, endTime: true } },
+    },
+  });
+
+  return { success: true, user, bookings };
+}

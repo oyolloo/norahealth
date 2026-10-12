@@ -72,6 +72,16 @@ const AdminNavigation = ({ userId }) => {
             >
               <Link href={`/admin/${userId}/orders`}>Orders</Link>
             </Button>
+            <Button
+              variant={
+                path.toString() === `/admin/${userId}/appointments`
+                  ? "default"
+                  : "outline"
+              }
+              asChild
+            >
+              <Link href={`/admin/${userId}/appointments`}>Appointments</Link>
+            </Button>
           </ButtonGroup>
         </ButtonGroup>
       </div>
