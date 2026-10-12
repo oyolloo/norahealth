@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { saveAddressSettingsAction, testGoogleKeyAction } from "@/actions/settings.action";
+import ApiKeyHelp from "./api-key-help";
 
 const initial = { success: null, msg: "" };
 
@@ -48,9 +49,12 @@ export default function AddressSettingsForm({ enabled, hasKey, keyHint, ready })
       </label>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="apiKey" className="text-sm font-semibold text-[#0D060C]">
-          Google API key
-        </label>
+        <div className="flex items-center gap-1.5">
+          <label htmlFor="apiKey" className="text-sm font-semibold text-[#0D060C]">
+            Google API key
+          </label>
+          <ApiKeyHelp />
+        </div>
         <input
           id="apiKey"
           name="apiKey"
