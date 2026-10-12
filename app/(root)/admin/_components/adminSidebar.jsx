@@ -10,6 +10,7 @@ import {
   Shield,
   Pill,
   Calendar,
+  ChartColumn,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -47,6 +48,12 @@ const NAV_ITEMS = [
     label: "Appointment Slot",
     Icon: Calendar,
     isActive: (p) => p.startsWith("/admin/booking-slot"),
+  },
+  {
+    href: "/admin/analytics",
+    label: "Analytics",
+    Icon: ChartColumn,
+    isActive: (p) => p.startsWith("/admin/analytics"),
   },
   {
     href: "/admin/blog",
