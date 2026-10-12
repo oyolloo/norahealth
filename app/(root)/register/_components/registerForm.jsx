@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, LoaderIcon } from "lucide-react";
 import { registerFullAction } from "@/actions/user.action";
 import DateField from "@/components/global/DateField";
+import AddressLookupInput from "@/components/global/AddressLookupInput";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -270,13 +271,16 @@ const RegisterForm = () => {
             >
               Home Address
             </label>
-            <input
-              type='text'
+            <AddressLookupInput
+              kind='address'
               id='address'
               name='address'
               placeholder='Home Address'
               value={form.address}
               onChange={handleChange}
+              onPick={({ postcode }) =>
+                postcode && handleChange({ target: { name: "zip", value: postcode } })
+              }
               className={inputClass}
             />
           </div>
@@ -285,8 +289,8 @@ const RegisterForm = () => {
             <label className='block text-base mb-2 text-[#0D060C]' htmlFor='zip'>
               Home Post Code
             </label>
-            <input
-              type='text'
+            <AddressLookupInput
+              kind='postcode'
               id='zip'
               name='zip'
               placeholder='Home Post Code'
@@ -313,13 +317,16 @@ const RegisterForm = () => {
             >
               Delivery Address
             </label>
-            <input
-              type='text'
+            <AddressLookupInput
+              kind='address'
               id='deliveryAddress'
               name='deliveryAddress'
               placeholder='Delivery Address'
               value={form.deliveryAddress}
               onChange={handleChange}
+              onPick={({ postcode }) =>
+                postcode && handleChange({ target: { name: "deliveryZip", value: postcode } })
+              }
               readOnly={sameAsHome}
               className={`${inputClass} ${sameAsHome ? "opacity-60" : ""}`}
             />
@@ -332,8 +339,8 @@ const RegisterForm = () => {
             >
               Delivery Post code
             </label>
-            <input
-              type='text'
+            <AddressLookupInput
+              kind='postcode'
               id='deliveryZip'
               name='deliveryZip'
               placeholder='Delivery Post code'

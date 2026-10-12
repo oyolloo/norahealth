@@ -212,3 +212,10 @@ enum OcRequest {
   MORNING_AFTER_PILL
 }
 
+
+// Admin-editable site settings, one row per key.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
