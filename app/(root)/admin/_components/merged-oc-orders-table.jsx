@@ -677,11 +677,20 @@ export default function MergedOcOrdersTable() {
                   <React.Fragment key={r.key}>
                     {/* PRIMARY ROW — essential columns only */}
                     <TableRow
-                      className="cursor-pointer"
+                      className={`cursor-pointer ${
+                        isOpen
+                          ? "bg-[#F4E7E1] hover:bg-[#F4E7E1] data-[state=selected]:bg-[#F4E7E1] border-b-0"
+                          : ""
+                      }`}
                       data-state={isOpen ? "selected" : undefined}
+                      aria-expanded={isOpen}
                       onClick={() => toggleExpanded(r.key)}
                     >
-                      <TableCell className="whitespace-normal max-w-[140px]">
+                      <TableCell
+                        className={`whitespace-normal max-w-[140px] ${
+                          isOpen ? "shadow-[inset_4px_0_0_#CE8936]" : ""
+                        }`}
+                      >
                         {r.userId ? (
                           <Link
                             href={`/admin/${r.userId}/orders`}
@@ -822,8 +831,8 @@ export default function MergedOcOrdersTable() {
 
                     {/* DETAIL ROW — hidden until expanded */}
                     {isOpen && (
-                      <TableRow className="bg-[#faf9f8] hover:bg-[#faf9f8]">
-                        <TableCell colSpan={COLSPAN} className="p-0">
+                      <TableRow className="bg-[#FBF4F0] hover:bg-[#FBF4F0] border-b-2 border-b-[#E8CDB8]">
+                        <TableCell colSpan={COLSPAN} className="p-0 shadow-[inset_4px_0_0_#CE8936]">
                           <dl className="flex flex-wrap gap-x-10 gap-y-3 px-6 py-4">
                             {r.booking && (
                               <DetailField
