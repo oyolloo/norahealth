@@ -186,13 +186,13 @@ const AccountForm = ({ user }) => {
             className='block text-base mb-2 text-[#0D060C]'
             htmlFor='address'
           >
-            Address
+            Home Address
           </label>
           <input
             type='text'
             name='address'
             id='address'
-            placeholder='Address'
+            placeholder='Home Address'
             value={form.address}
             onChange={handleChange}
             className='bg-[#F6F5F4] text-[#3A3D42] placeholder:text-[#3A3D42] w-full py-[18px] px-[16px] rounded-[6px]'
@@ -202,13 +202,13 @@ const AccountForm = ({ user }) => {
         {/* Zip code → 25% */}
         <div className='md:col-span-1'>
           <label className='block text-base mb-2 text-[#0D060C]' htmlFor='zip'>
-            Post code
+            Home Post Code
           </label>
           <input
             type='text'
             name='zip'
             id='zip'
-            placeholder='Post code'
+            placeholder='Home Post Code'
             value={form.zip}
             onChange={handleChange}
             className='bg-[#F6F5F4] text-[#3A3D42] placeholder:text-[#3A3D42] w-full py-[18px] px-[16px] rounded-[6px]'
