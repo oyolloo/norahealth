@@ -25,14 +25,35 @@ async function settings() {
   return cached.value;
 }
 
+// Per-IP limit plus a site-wide hourly cap on paid Google calls, so a
+// script rotating IPs still cannot run up the Google bill.
 const hits = new Map();
 function limited(ip) {
   const now = Date.now();
   const recent = (hits.get(ip) || []).filter((t) => now - t < 60_000);
   recent.push(now);
   hits.set(ip, recent);
-  if (hits.size > 5000) hits.clear();
+  if (hits.size > 5000) {
+    for (const [k, v] of hits) if (!v.some((t) => now - t < 60_000)) hits.delete(k);
+  }
   return recent.length > 60;
+}
+
+const GOOGLE_HOURLY_CAP = 1000;
+let googleWindow = { start: 0, count: 0 };
+function googleCapReached() {
+  const now = Date.now();
+  if (now - googleWindow.start > 3_600_000) googleWindow = { start: now, count: 0 };
+  googleWindow.count += 1;
+  return googleWindow.count > GOOGLE_HOURLY_CAP;
+}
+
+// nginx sets x-real-ip; otherwise trust only the entry our proxy appended (the last one).
+function clientIp(req) {
+  const real = req.headers.get("x-real-ip");
+  if (real) return real.trim();
+  const xff = (req.headers.get("x-forwarded-for") || "").split(",").map((x) => x.trim()).filter(Boolean);
+  return xff[xff.length - 1] || "local";
 }
 
 const json = (body, status = 200) =>
@@ -41,7 +62,7 @@ const json = (body, status = 200) =>
 export async function GET(req) {
   const url = new URL(req.url);
   const action = url.searchParams.get("action");
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const ip = clientIp(req);
   const s = await settings();
 
   if (action === "config") return json({ provider: s.provider });
@@ -54,6 +75,7 @@ export async function GET(req) {
       const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
       if (s.provider === "google") {
         if (q.length < 3) return json({ suggestions: [] });
+        if (googleCapReached()) return json({ suggestions: [] }, 429);
         const r = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
           method: "POST",
           headers: {

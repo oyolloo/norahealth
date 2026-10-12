@@ -59,6 +59,16 @@ const STEPS = [
     ),
   },
   {
+    title: "Cap daily use (recommended)",
+    body: (
+      <>
+        Open <b>APIs &amp; Services &gt; Places API (New) &gt; Quotas</b> and lower the requests-per-day
+        limit to a number you are comfortable paying for. The site also stops calling Google after 1,000
+        searches in an hour.
+      </>
+    ),
+  },
+  {
     title: "Paste it here",
     body: (
       <>
