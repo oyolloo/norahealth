@@ -43,8 +43,27 @@ const RegisterForm = () => {
     deliveryZip: "",
   });
 
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const [sameAsHome, setSameAsHome] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (sameAsHome && name === "address") next.deliveryAddress = value;
+      if (sameAsHome && name === "zip") next.deliveryZip = value;
+      return next;
+    });
+  };
+
+  const toggleSameAsHome = (checked) => {
+    setSameAsHome(checked);
+    if (checked)
+      setForm((prev) => ({
+        ...prev,
+        deliveryAddress: prev.address,
+        deliveryZip: prev.zip,
+      }));
+  };
 
   const initialState = { msg: "", success: false };
   const [state, action, loading] = useActionState(
@@ -62,8 +81,8 @@ const RegisterForm = () => {
       if (!form.phone.trim()) missing.push("Phone Number");
       if (!dob) missing.push("Date of Birth");
     } else if (idx === 1) {
-      if (!form.address.trim()) missing.push("Address");
-      if (!form.zip.trim()) missing.push("Post code");
+      if (!form.address.trim()) missing.push("Home Address");
+      if (!form.zip.trim()) missing.push("Home Post Code");
       if (!form.deliveryAddress.trim()) missing.push("Delivery Address");
       if (!form.deliveryZip.trim()) missing.push("Delivery Post code");
     }
@@ -249,13 +268,13 @@ const RegisterForm = () => {
               className='block text-base mb-2 text-[#0D060C]'
               htmlFor='address'
             >
-              Address
+              Home Address
             </label>
             <input
               type='text'
               id='address'
               name='address'
-              placeholder='Address'
+              placeholder='Home Address'
               value={form.address}
               onChange={handleChange}
               className={inputClass}
@@ -264,18 +283,28 @@ const RegisterForm = () => {
 
           <div>
             <label className='block text-base mb-2 text-[#0D060C]' htmlFor='zip'>
-              Post code
+              Home Post Code
             </label>
             <input
               type='text'
               id='zip'
               name='zip'
-              placeholder='Post code'
+              placeholder='Home Post Code'
               value={form.zip}
               onChange={handleChange}
               className={inputClass}
             />
           </div>
+
+          <label className='md:col-span-2 flex items-center gap-2 text-base text-[#0D060C] cursor-pointer select-none'>
+            <input
+              type='checkbox'
+              checked={sameAsHome}
+              onChange={(e) => toggleSameAsHome(e.target.checked)}
+              className='size-4 accent-[#CE8936] cursor-pointer'
+            />
+            Delivery address is the same as my home address
+          </label>
 
           <div className='md:col-span-2'>
             <label
@@ -291,7 +320,8 @@ const RegisterForm = () => {
               placeholder='Delivery Address'
               value={form.deliveryAddress}
               onChange={handleChange}
-              className={inputClass}
+              readOnly={sameAsHome}
+              className={`${inputClass} ${sameAsHome ? "opacity-60" : ""}`}
             />
           </div>
 
@@ -309,7 +339,8 @@ const RegisterForm = () => {
               placeholder='Delivery Post code'
               value={form.deliveryZip}
               onChange={handleChange}
-              className={inputClass}
+              readOnly={sameAsHome}
+              className={`${inputClass} ${sameAsHome ? "opacity-60" : ""}`}
             />
           </div>
         </div>
