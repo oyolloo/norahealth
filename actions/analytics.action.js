@@ -1,46 +1,69 @@
 "use server";
 import { prisma } from "@/lib/client/prisma";
 import { getAdminUser } from "./admin.action";
-import { countOrderRequests, periodStarts } from "@/lib/analytics";
+import { RANGES, rangeWindow, summarise, toUk } from "@/lib/analytics";
 
-export async function getAnalyticsAction() {
+const HOUR = 60 * 60 * 1000;
+
+export async function getAnalyticsAction(range = "month") {
   const admin = await getAdminUser();
   if (!admin) return { success: false, msg: "Unauthorized. User is not admin" };
+  if (!RANGES.includes(range)) range = "month";
 
-  const now = new Date();
-  const starts = periodStarts(now);
-  const since = new Date(
-    Math.min(starts.week.getTime(), starts.month.getTime())
-  );
+  const ukNow = toUk(new Date());
 
-  const [totalPatients, orderingPatients, totalRequests, requests, orders] =
+  let firstUk = ukNow;
+  if (range === "all") {
+    const oldest = { orderBy: { createdAt: "asc" }, select: { createdAt: true } };
+    const firsts = (
+      await Promise.all([
+        prisma.booking.findFirst(oldest),
+        prisma.order.findFirst(oldest),
+        prisma.user.findFirst({ ...oldest, where: { role: "PATIENT" } }),
+      ])
+    ).filter(Boolean);
+    if (firsts.length)
+      firstUk = toUk(new Date(Math.min(...firsts.map((f) => new Date(f.createdAt).getTime()))));
+  }
+
+  const win = rangeWindow(range, ukNow, firstUk);
+  // UK-shifted times are at most 1h ahead of real UTC; pad the query by 2h.
+  const from = new Date((win.prevStart || win.start).getTime() - 2 * HOUR);
+  const where = range === "all" ? {} : { createdAt: { gte: from } };
+
+  const [totalPatients, orderingPatients, requests, appointments, orders, signups] =
     await Promise.all([
       prisma.user.count({ where: { role: "PATIENT" } }),
       prisma.order.findMany({ distinct: ["userId"], select: { userId: true } }),
-      prisma.booking.count({ where: { bookingType: "Order" } }),
       prisma.booking.findMany({
-        where: { bookingType: "Order", createdAt: { gte: since } },
+        where: { ...where, bookingType: "Order" },
         select: { createdAt: true, ocRequest: true },
       }),
-      prisma.order.findMany({
-        where: { createdAt: { gte: since } },
+      prisma.booking.findMany({
+        where: { ...where, bookingType: "Booking" },
+        select: { createdAt: true },
+      }),
+      prisma.order.findMany({ where, select: { createdAt: true } }),
+      prisma.user.findMany({
+        where: { ...where, role: "PATIENT" },
         select: { createdAt: true },
       }),
     ]);
 
-  const medicineOrders = {};
-  for (const [period, start] of Object.entries(starts)) {
-    medicineOrders[period] = orders.filter(
-      (o) => new Date(o.createdAt) >= start
-    ).length;
-  }
+  const rows = (list, withTypes) =>
+    list.map((r) => ({
+      at: toUk(r.createdAt),
+      types: withTypes ? r.ocRequest : undefined,
+    }));
 
   return {
     success: true,
+    range,
     totalPatients,
     patientsWithOrder: orderingPatients.length,
-    totalRequests,
-    requests: countOrderRequests(requests, now),
-    medicineOrders,
+    requests: summarise(rows(requests, true), win),
+    appointments: summarise(rows(appointments), win),
+    orders: summarise(rows(orders), win),
+    signups: summarise(rows(signups), win),
   };
 }
