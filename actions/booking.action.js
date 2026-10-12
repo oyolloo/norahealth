@@ -1240,13 +1240,17 @@ export async function updateBookingStatus(formDataOrObj) {
 
 
 export async function getPatientAppointmentsAction(userId) {
+  // getAdminUser() returns null for anyone who is not ADMIN/SUPERADMIN.
   const admin = await getAdminUser();
-  if (!admin?.admin?.isAdmin) {
+  if (!admin) {
     return { success: false, msg: "Unauthorized. User is not admin" };
   }
 
+  const id = Number(userId);
+  if (!Number.isInteger(id)) return { success: false, msg: "Patient not found" };
+
   const user = await prisma.user.findUnique({
-    where: { id: Number(userId) },
+    where: { id },
     select: {
       id: true,
       email: true,

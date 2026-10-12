@@ -50,9 +50,15 @@ function apptTime(b) {
   return `${t(start)} – ${t(end)}`;
 }
 
+// Current UK wall-clock time expressed the same way appointments are stored.
+function ukNowAsUtc() {
+  const s = new Date().toLocaleString("sv-SE", { timeZone: "Europe/London" });
+  return Date.parse(s.replace(" ", "T") + "Z");
+}
+
 export function AppointmentsTable({ userId, user, bookings, error }) {
   const { setMenuOpen } = useAdmin();
-  const now = Date.now();
+  const now = ukNowAsUtc();
 
   return (
     <div className="w-full p-10">
