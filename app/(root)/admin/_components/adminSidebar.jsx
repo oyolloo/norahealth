@@ -11,6 +11,7 @@ import {
   Pill,
   Calendar,
   ChartColumn,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -60,6 +61,12 @@ const NAV_ITEMS = [
     label: "Blogs",
     Icon: NotebookPen,
     isActive: (p) => p.startsWith("/admin/blog"),
+  },
+  {
+    href: "/admin/settings",
+    label: "Settings",
+    Icon: Settings,
+    isActive: (p) => p.startsWith("/admin/settings"),
   },
 ];
 

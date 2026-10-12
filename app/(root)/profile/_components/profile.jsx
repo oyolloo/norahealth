@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { LoaderIcon, PanelLeft, SquarePen } from "lucide-react";
 import DateField from "@/components/global/DateField";
+import AddressLookupInput from "@/components/global/AddressLookupInput";
 import { useProfile } from "@/lib/profileContext";
 import { formatDate } from "@/lib/utils";
 import { useActionState } from "react";
@@ -36,6 +37,14 @@ const Profile = ({ account }) => {
     deliveryAddress,
     deliveryZipCode,
   } = account;
+
+  const [addr, setAddr] = useState({
+    address: address || "",
+    zip: zipCode || "",
+    deliveryAddress: deliveryAddress || "",
+    deliveryZip: deliveryZipCode || "",
+  });
+  const onAddr = (e) => setAddr((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   // ---------- Account update action ----------
   const accountInitialState = {
@@ -271,11 +280,13 @@ const Profile = ({ account }) => {
             >
               Home Address
             </label>
-            <input
+            <AddressLookupInput
+              kind='address'
               id='homeAddress'
-              type='text'
-              defaultValue={address}
               name='address'
+              value={addr.address}
+              onChange={onAddr}
+              onPick={({ postcode }) => postcode && onAddr({ target: { name: "zip", value: postcode } })}
               placeholder='Wellin Lane, Edwalton, United Kingdom'
               className='bg-white border border-[#EEE0CF] text-black w-full py-[15px] px-[16px] rounded-[6px]'
             />
@@ -287,11 +298,12 @@ const Profile = ({ account }) => {
             >
               Home Post Code
             </label>
-            <input
+            <AddressLookupInput
+              kind='postcode'
               id='homeZip'
-              type='text'
-              defaultValue={zipCode}
               name='zip'
+              value={addr.zip}
+              onChange={onAddr}
               placeholder='NG12 4AS'
               className='bg-white border border-[#EEE0CF] text-black w-full py-[15px] px-[16px] rounded-[6px]'
             />
@@ -303,11 +315,13 @@ const Profile = ({ account }) => {
             >
               Delivery Address
             </label>
-            <input
+            <AddressLookupInput
+              kind='address'
               id='deliveryAddress'
-              type='text'
-              defaultValue={deliveryAddress}
               name='deliveryAddress'
+              value={addr.deliveryAddress}
+              onChange={onAddr}
+              onPick={({ postcode }) => postcode && onAddr({ target: { name: "deliveryZip", value: postcode } })}
               placeholder='Wellin Lane, Edwalton, United Kingdom'
               className='bg-white border border-[#EEE0CF] text-black w-full py-[15px] px-[16px] rounded-[6px]'
             />
@@ -319,11 +333,12 @@ const Profile = ({ account }) => {
             >
               Delivery Post code
             </label>
-            <input
+            <AddressLookupInput
+              kind='postcode'
               id='deliveryZip'
-              type='text'
-              defaultValue={deliveryZipCode}
               name='deliveryZip'
+              value={addr.deliveryZip}
+              onChange={onAddr}
               placeholder='NG12 4AS'
               className='bg-white border border-[#EEE0CF] text-black w-full py-[15px] px-[16px] rounded-[6px]'
             />

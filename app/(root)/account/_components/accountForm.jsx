@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, startTransition } from "react";
 import DateField from "@/components/global/DateField";
+import AddressLookupInput from "@/components/global/AddressLookupInput";
 import { useActionState } from "react";
 import { createAccountAction } from "@/actions/account.action";
 import { toast } from "sonner";
@@ -188,13 +189,16 @@ const AccountForm = ({ user }) => {
           >
             Home Address
           </label>
-          <input
-            type='text'
+          <AddressLookupInput
+            kind='address'
             name='address'
             id='address'
             placeholder='Home Address'
             value={form.address}
             onChange={handleChange}
+            onPick={({ postcode }) =>
+              postcode && handleChange({ target: { name: "zip", value: postcode } })
+            }
             className='bg-[#F6F5F4] text-[#3A3D42] placeholder:text-[#3A3D42] w-full py-[18px] px-[16px] rounded-[6px]'
           />
         </div>
@@ -204,8 +208,8 @@ const AccountForm = ({ user }) => {
           <label className='block text-base mb-2 text-[#0D060C]' htmlFor='zip'>
             Home Post Code
           </label>
-          <input
-            type='text'
+          <AddressLookupInput
+            kind='postcode'
             name='zip'
             id='zip'
             placeholder='Home Post Code'
@@ -222,13 +226,16 @@ const AccountForm = ({ user }) => {
           >
             Delivery Address
           </label>
-          <input
-            type='text'
+          <AddressLookupInput
+            kind='address'
             name='deliveryAddress'
             id='deliveryAddress'
             placeholder='Delivery Address'
             value={form.deliveryAddress}
             onChange={handleChange}
+            onPick={({ postcode }) =>
+              postcode && handleChange({ target: { name: "deliveryZip", value: postcode } })
+            }
             className='bg-[#F6F5F4] text-[#3A3D42] placeholder:text-[#3A3D42] w-full py-[18px] px-[16px] rounded-[6px]'
           />
         </div>
@@ -241,8 +248,8 @@ const AccountForm = ({ user }) => {
           >
             Delivery Post code
           </label>
-          <input
-            type='text'
+          <AddressLookupInput
+            kind='postcode'
             name='deliveryZip'
             id='deliveryZip'
             placeholder='Delivery Post code'
