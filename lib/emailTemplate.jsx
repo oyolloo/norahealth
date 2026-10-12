@@ -1,21 +1,17 @@
 import { Resend } from "resend";
+import {
+  bookingConfirmationEmailHtml,
+  calendarButtonsHtml,
+  firstNameOf,
+  orderReceivedEmailHtml,
+  orderStatusEmailHtml,
+  welcomeEmailHtml,
+} from "./emailHtml";
+
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 
-function getStatusLabel(status) {
-  const s = String(status || "").toLowerCase();
-
-  if (s === "clinicalreview") return "Awaiting Dispatch";
-  if (s === "posted") return "Posted via Royal Mail";
-  if (s === "declined") return "Declined";
-
-  return status || "";
-}
-
-function firstNameOf(name) {
-  return String(name || "").trim().split(/\s+/)[0] || "there";
-}
 
 function formatDate(date) {
   return new Date(date).toLocaleString("en-GB", {
@@ -26,14 +22,6 @@ function formatDate(date) {
 }
 
 
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 /**
  * Welcome email — sent once the patient completes their Account Registration
@@ -41,103 +29,7 @@ function escapeHtml(str) {
  * personalised as "Hello <first name>,"). Copy supplied by the client.
  */
 export async function sendWelcomeEmail({ to, name }) {
-  const greetingName = firstNameOf(name); // "there" as a safe fallback
-  // Full international number (44 + 7440126154); the client's draft link was
-  // missing the "44" country code, which would break the WhatsApp deep link.
-  const whatsappLink = "https://wa.me/447440126154";
-  const orderOnlineLink = "https://www.norahealth.co.uk/booking/order";
-  const siteLink = "https://www.norahealth.co.uk";
-  const linkStyle = "color:#cd8936;text-decoration:underline;";
-
-  const html = `
-  <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
-    <table width="100%" style="max-width:600px;margin:auto;background:#fff;border-radius:6px;border:1px solid #eee;">
-      <tr>
-        <td style="background:#cd8936;color:#fff;padding:16px;text-align:center;font-size:22px;font-weight:bold;">
-          Nora Health
-        </td>
-      </tr>
-
-      <tr>
-        <td style="padding:20px 20px 0;font-size:18px;font-weight:bold;color:#333;">
-          Welcome to Nora Health
-        </td>
-      </tr>
-
-      <tr>
-        <td style="padding:16px 20px 20px;font-size:15px;color:#333;line-height:1.6;">
-          <p>Hello ${escapeHtml(greetingName)},</p>
-
-          <p>
-            Welcome to Nora Health — you have just joined the UK's simplest
-            ordering service for contraception.
-          </p>
-
-          <p>
-            Whether you need your regular supply, want to try a new pill or
-            require urgent protection (morning after pill), we get it to you
-            fast, discreetly and with zero hassle.
-          </p>
-
-          <p style="font-weight:bold;color:#cd8936;margin-top:24px;">
-            Option 1: Order via WhatsApp (Recommended)
-          </p>
-          <p>
-            We highly recommend using our WhatsApp service for the absolute
-            fastest experience. Chat directly with our team instantly:<br/>
-            👉 <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Click here to order on WhatsApp</a>
-            (or text us at 07440 126 154)
-          </p>
-
-          <p style="font-weight:bold;color:#cd8936;margin-top:24px;">
-            Option 2: Order Online (Quick &amp; Easy)
-          </p>
-          <p>
-            Prefer to use our website? You can safely submit your details and
-            request your prescription through our secure online portal:<br/>
-            👉 <a href="${orderOnlineLink}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Click here to order online at norahealth.co.uk</a>
-          </p>
-
-          <p style="font-weight:bold;margin-top:24px;">What you can order today:</p>
-          <ul style="padding-left:20px;margin:0;">
-            <li style="margin-bottom:6px;"><b>Regular repeat contraception:</b> Never run out of your daily pill.</li>
-            <li style="margin-bottom:6px;"><b>New contraception:</b> Switch your method easily online or via chat.</li>
-            <li style="margin-bottom:6px;"><b>Emergency contraception:</b> Quick, confidential access to the morning-after pill.</li>
-          </ul>
-
-          <p style="font-weight:bold;margin-top:24px;">Our Promise To You:</p>
-          <ul style="padding-left:20px;margin:0;">
-            <li style="margin-bottom:6px;"><b>Total flexibility:</b> Order online or straight through WhatsApp.</li>
-            <li style="margin-bottom:6px;"><b>Fast &amp; reliable:</b> Secure Royal Mail 24-hour tracked delivery for next-day arrival.</li>
-            <li style="margin-bottom:6px;"><b>Zero stress:</b> No long pharmacy queues or waiting for appointments.</li>
-            <li style="margin-bottom:6px;"><b>Total transparency:</b> An online account to keep track of all of your orders.</li>
-          </ul>
-
-          <p style="margin-top:24px;">
-            Ready to start? Tap the WhatsApp link below to say hello or visit our
-            <a href="${orderOnlineLink}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">website</a>
-            to secure your next order.
-          </p>
-          <p>
-            👉 <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Chat with us on WhatsApp</a>
-          </p>
-
-          <p style="margin-top:16px;">
-            Best health,<br/>
-            The Nora Health Team<br/>
-            <a href="${siteLink}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">norahealth.co.uk</a>
-          </p>
-        </td>
-      </tr>
-
-      <tr>
-        <td style="background:#f3f3f3;padding:12px;text-align:center;font-size:13px;color:#777;">
-          © ${new Date().getFullYear()} Nora Health. All rights reserved.
-        </td>
-      </tr>
-    </table>
-  </div>
-  `;
+  const html = welcomeEmailHtml({ name });
 
   await resend.emails.send({
     from: "Nora Health <contact@norahealth.co.uk>",
@@ -294,23 +186,6 @@ function buildIcs({ title, start, end, details, location, uid }) {
 // button, each with its real brand logo. The logos are hosted PNGs (Gmail and
 // Outlook don't render SVG or data: URIs in email), sized 2x for retina and
 // shown with alt="" so a blocked image just leaves the text label intact.
-function calendarButtonsHtml({ google, ics }) {
-  const btn =
-    "display:inline-block;padding:10px 18px;margin:0 8px 8px 0;border:1px solid #cd8936;border-radius:8px;color:#cd8936;text-decoration:none;font-size:14px;font-weight:bold;";
-  const base = "https://www.norahealth.co.uk/images/email";
-  const appleIcon = `<img src="${base}/apple.png" width="13" height="16" alt="" style="vertical-align:middle;margin-right:7px;border:0;" />`;
-  const googleIcon = `<img src="${base}/google-calendar.png" width="16" height="16" alt="" style="vertical-align:middle;margin-right:7px;border:0;" />`;
-  return `
-        <p style="font-weight:bold;color:#cd8936;margin:20px 0 8px;">You can add this appointment to your calendar</p>
-        <p style="margin:0 0 6px;">
-          <a href="${ics}" target="_blank" rel="noopener noreferrer" style="${btn}">${appleIcon}Apple / Other</a>
-          <a href="${google}" target="_blank" rel="noopener noreferrer" style="${btn}">${googleIcon}Google Calendar</a>
-        </p>
-        <p style="margin:0 0 12px;font-size:12px;color:#777;">
-          &ldquo;Apple / Other&rdquo; opens a calendar file that works with Apple
-          Calendar, Outlook and most apps.
-        </p>`;
-}
 
 // Assemble calendar links + ICS + button HTML for a 1-hour appointment slot.
 // `stored` is the wall-clock-in-UTC appointment; `storedEnd` optional.
@@ -394,234 +269,10 @@ function appointmentCalendar({ stored, storedEnd, fullName, whatsappNumber, supp
 // `;
 
 
-export const orderEmailTemplate = ({
-  firstName,
-  customerName,
-  phoneNumber,
-  deliveryAddress,
-  callDate,
-  callTimeSlot,
-  calendarButtons = "",
-}) => {
-  const whatsappLink = "https://wa.me/447440126154";
-  const supportEmail = "pharmacy.fap80@nhs.net";
-
-  const name = escapeHtml(firstName || firstNameOf(customerName));
-  const phone = escapeHtml(phoneNumber || "your registered number");
-  const address = escapeHtml(deliveryAddress || "your delivery address");
-
-  // "We will call you on 07-Aug during 10:00 – 11:00. The 1-hour slot simply
-  // indicates when you may expect a call." Only shown when we have the slot.
-  const date = escapeHtml(callDate || "");
-  const slot = escapeHtml(callTimeSlot || "");
-  const callLine = date
-    ? `We will call you on <strong>${date}</strong>${
-        slot ? ` during <strong>${slot}</strong>` : ""
-      }. The 1-hour slot simply indicates when you may expect a call. `
-    : "";
-
-  return `
-<div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
-  <table width="100%" style="max-width:600px;margin:auto;background:#fff;border:1px solid #eee;border-radius:6px;">
-    <tr>
-      <td style="background:#cd8936;color:#fff;padding:16px;text-align:center;font-size:22px;font-weight:bold;">
-        Nora Health
-      </td>
-    </tr>
-
-    <tr>
-      <td style="padding:20px 20px 0;font-size:18px;font-weight:bold;color:#333;">
-        Order Confirmation
-      </td>
-    </tr>
-
-    <tr>
-      <td style="padding:16px 20px 20px;color:#333;font-size:15px;line-height:1.6;">
-        <p>Hello ${name},</p>
-
-        <p>Thank you for submitting your contraception request with Nora Health.</p>
-
-        <p style="font-weight:bold;color:#cd8936;margin-top:20px;">Next Steps:</p>
-        <p>
-          Before we can approve your contraception request we need to complete a
-          quick telephone call &mdash; usually only takes <strong>just 2&ndash;3 minutes</strong>.
-          ${callLine}If there is a specific time that works best for you, feel
-          free to tell us and we'll try our best to match it.
-        </p>
-        ${calendarButtons}
-
-        <p style="font-weight:bold;color:#cd8936;margin-top:20px;">Delivery:</p>
-        <p>
-          After your consultation we will post your medication to
-          <strong>${address}</strong> in discreet packaging. Our service is
-          completely free. If we complete the call before 1pm we can usually
-          arrange for next day delivery using Royal Mail 24 Hour Tracked service.
-        </p>
-
-        <p style="font-weight:bold;color:#cd8936;margin-top:20px;">Getting in Touch:</p>
-        <p>
-          If you need to adjust your appointment or have any questions you may
-          message us and/or call us directly on
-          <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" style="color:#cd8936;text-decoration:underline;">
-            WhatsApp
-          </a>
-          or email us at
-          <a href="mailto:${supportEmail}" style="color:#cd8936;text-decoration:underline;">
-            ${supportEmail}
-          </a>. For anything urgent please call us directly via WhatsApp.
-        </p>
-
-        <p style="margin-top:16px;">
-          Thank you &mdash; we look forward to speaking with you soon,<br/>
-          Dev
-        </p>
-      </td>
-    </tr>
-
-    <tr>
-      <td style="background:#f3f3f3;padding:12px;text-align:center;font-size:13px;color:#777;">
-        © ${new Date().getFullYear()} Nora Health. All rights reserved.
-      </td>
-    </tr>
-  </table>
-</div>
-`;
-};
+export const orderEmailTemplate = (args) => orderReceivedEmailHtml(args);
 
 
-
-export const orderStatusEmailTemplate = ({
-  customerName,
-  firstName,
-  orderId,
-  status,
-  trackingId,
-  medicineName,
-  deliveryAddress,
-}) => {
-  const name = escapeHtml(firstName || firstNameOf(customerName));
-  const med = escapeHtml(medicineName || "");
-  const tracking = escapeHtml(trackingId || "Pending");
-  const address = escapeHtml(deliveryAddress || "your delivery address");
-
-  const whatsappLink = "https://wa.me/447440126154";
-  const emailAddress = "pharmacy.fap80@nhs.net";
-
-  const s = String(status || "").toLowerCase();
-
-  const queryLine = `
-    <p style="margin:16px 0 0;color:#555;font-size:13px;">
-      If you have any queries regarding your order please
-      <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" style="color:#cd8936;text-decoration:underline;">
-        click here
-      </a>
-      to message us on WhatsApp or send us an email on
-      <a href="mailto:${emailAddress}" style="color:#cd8936;text-decoration:underline;">
-        ${emailAddress}
-      </a>.
-    </p>`;
-
-  let title = "Contraception Update";
-  let inner;
-
-  if (s === "declined") {
-    title = "Contraception Request Declined";
-    inner = `
-      <p style="margin:0 0 12px;">Hi ${name},</p>
-      <p style="margin:0 0 12px;">
-        Your contraceptive request didn&#39;t pass our clinical safety checks so we
-        haven&#39;t been able to post your medicines yet.
-      </p>
-      <p style="margin:0 0 12px;">
-        When you have a moment, please get in touch with us &mdash; we just need a
-        little more information to make sure everything is safe for you. You can
-        call us,
-        <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" style="color:#cd8936;text-decoration:underline;">message us on WhatsApp</a>,
-        or email us at
-        <a href="mailto:${emailAddress}" style="color:#cd8936;text-decoration:underline;">${emailAddress}</a>.
-      </p>
-      <p style="margin:0;">We&#39;ll do our very best to sort this out quickly for you.</p>
-    `;
-  } else if (s === "posted") {
-    title = "Contraception Posted";
-    inner = `
-      <p style="margin:0 0 12px;">Hi ${name},</p>
-      <p style="margin:0 0 12px;">
-        Your contraceptive has been posted via Royal Mail tracked service.
-      </p>
-      ${queryLine}
-      <p style="margin:16px 0 8px;font-weight:bold;">Order details:</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="font-size:15px;color:#333;">
-        <tr>
-          <td style="padding:6px 0;width:160px;font-weight:bold;color:#cd8936;">Contraceptive:</td>
-          <td>#${med}</td>
-        </tr>
-        <tr>
-          <td style="padding:6px 0;font-weight:bold;color:#cd8936;">Delivery Address:</td>
-          <td>${address}</td>
-        </tr>
-        <tr>
-          <td style="padding:6px 0;font-weight:bold;color:#cd8936;">Tracking ID:</td>
-          <td>${tracking}</td>
-        </tr>
-      </table>
-    `;
-  } else {
-    // clinicalreview -> Awaiting Dispatch (default)
-    inner = `
-      <p style="margin:0 0 12px;">Hi ${name},</p>
-      <p style="margin:0 0 12px;">
-        Your contraceptive request has been approved and is awaiting dispatch.
-      </p>
-      <p style="margin:16px 0 8px;font-weight:bold;">Order details:</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="font-size:15px;color:#333;">
-        <tr>
-          <td style="padding:6px 0;width:160px;font-weight:bold;color:#cd8936;">Oral Contraceptive:</td>
-          <td>${med}</td>
-        </tr>
-        <tr>
-          <td style="padding:6px 0;font-weight:bold;color:#cd8936;">Status:</td>
-          <td>${escapeHtml(getStatusLabel(status))}</td>
-        </tr>
-        <tr>
-          <td style="padding:6px 0;font-weight:bold;color:#cd8936;">Tracking ID:</td>
-          <td>${tracking}</td>
-        </tr>
-      </table>
-      ${queryLine}
-    `;
-  }
-
-  return `
-  <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:auto;background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden;">
-      <tr>
-        <td style="background:#cd8936;color:#fff;padding:16px;text-align:center;font-size:22px;font-weight:bold;">
-          Nora Health
-        </td>
-      </tr>
-
-      <tr>
-        <td style="padding:20px 20px 0;font-size:18px;font-weight:bold;color:#333;">
-          ${title}
-        </td>
-      </tr>
-
-      <tr>
-        <td style="padding:12px 20px 20px;font-size:15px;color:#333;line-height:1.5;">
-          ${inner}
-        </td>
-      </tr>
-
-      <tr>
-        <td style="background:#f3f3f3;padding:12px;text-align:center;font-size:13px;color:#777;">
-          © ${new Date().getFullYear()} Nora Health. All rights reserved.
-        </td>
-      </tr>
-    </table>
-  </div>
-  `;
-};
+export const orderStatusEmailTemplate = (args) => orderStatusEmailHtml(args);
 
 
 // export async function sendBookingConfirmationEmail({
@@ -851,64 +502,13 @@ export async function sendBookingConfirmationEmail({
     supportEmail,
   });
 
-  const html = `
-  <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
-    <table width="100%" style="max-width:600px;margin:auto;background:#fff;border-radius:6px;border:1px solid #eee;">
-      <tr>
-        <td style="background:#cd8936;color:#fff;padding:16px;text-align:center;font-size:22px;font-weight:bold;">
-          Nora Health
-        </td>
-      </tr>
-
-      <tr>
-        <td style="padding:20px;font-size:18px;font-weight:bold;color:#333;">
-          Booking Confirmation
-        </td>
-      </tr>
-
-      <tr>
-        <td style="padding:0 20px 20px;font-size:15px;color:#333;">
-          <p>Hi ${escapeHtml(fullName)},</p>
-
-          <p>Your appointment has been successfully booked. Here are the details:</p>
-
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="padding:6px 0;font-weight:bold;color:#cd8936;">Appointment:</td>
-              <td>${formatAppointmentRange(appointment, appointmentEnd)}</td>
-            </tr>
-            ${
-              notes
-                ? `<tr>
-                     <td style="padding:6px 0;font-weight:bold;color:#cd8936;">Notes:</td>
-                     <td>${escapeHtml(notes)}</td>
-                   </tr>`
-                : ""
-            }
-          </table>
-          ${cal.buttonsHtml}
-
-          <p style="font-size:13px;color:#555;">
-            If you need to change or cancel your appointment, please
-            <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" style="color:#cd8936;text-decoration:underline;">
-              message us on WhatsApp
-            </a>
-            (${whatsappNumber}) or email us at
-            <a href="mailto:${supportEmail}" style="color:#cd8936;text-decoration:underline;">
-              ${supportEmail}
-            </a>.
-          </p>
-        </td>
-      </tr>
-
-      <tr>
-        <td style="background:#f3f3f3;padding:12px;text-align:center;font-size:13px;color:#777;">
-          © ${new Date().getFullYear()} Nora Health. All rights reserved.
-        </td>
-      </tr>
-    </table>
-  </div>
-  `;
+  const html = bookingConfirmationEmailHtml({
+    fullName,
+    appointmentText: formatAppointmentRange(appointment, appointmentEnd),
+    notes,
+    calendarButtons: cal.buttonsHtml,
+    whatsappNumber,
+  });
 
   await resend.emails.send({
     from: "Nora Health <contact@norahealth.co.uk>",
