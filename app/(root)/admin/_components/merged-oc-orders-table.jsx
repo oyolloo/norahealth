@@ -491,6 +491,15 @@ export default function MergedOcOrdersTable() {
 
   async function handleInlineOrderStatus(order, value) {
     if (!order?.id || value === order.status) return;
+    // Posted needs a chance to enter the tracking ID, so open the dialog
+    // instead of saving straight away (this also sends the posted email).
+    if (value === "posted") {
+      setSelectedForOStatus(order);
+      setOrderStatus("posted");
+      setOrderTrackingId(order.trackingId || "");
+      setOStatusOpen(true);
+      return;
+    }
     try {
       const fd = new FormData();
       fd.set("orderId", String(order.id));
@@ -1083,6 +1092,11 @@ export default function MergedOcOrdersTable() {
                 placeholder="Enter tracking id"
                 onChange={(e) => setOrderTrackingId(e.target.value)}
               />
+              {orderStatus === "posted" ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Leave empty to create the Royal Mail label automatically.
+                </p>
+              ) : null}
             </div>
             <Select value={orderStatus} onValueChange={setOrderStatus}>
               <SelectTrigger className="w-full">
