@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/client/prisma";
+import { FULL_ADDRESS_MSG, isFullAddress } from "@/lib/addressLookup";
 import { signToken, verifyToken } from "@/lib/jwt/jwt";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -144,6 +145,10 @@ export const registerFullAction = async (prevState, formData) => {
           ? `Please fill in your ${missing[0]}.`
           : `Please fill in: ${missing.join(", ")}.`,
     };
+  }
+
+  if (!isFullAddress(deliveryAddress)) {
+    return { success: false, msg: FULL_ADDRESS_MSG };
   }
 
   const dob = parseYMD(dobRaw);

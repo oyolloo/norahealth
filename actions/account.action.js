@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { loggedInUserAction } from "./user.action";
 import { prisma } from "@/lib/client/prisma";
+import { FULL_ADDRESS_MSG, isFullAddress } from "@/lib/addressLookup";
 import { getAdminUser } from "./admin.action";
 import { sendWelcomeEmail } from "@/lib/emailTemplate";
 
@@ -64,6 +65,10 @@ export const createAccountAction = async (prevState, formData) => {
           ? `Please fill in your ${missing[0]}.`
           : `Please fill in: ${missing.join(", ")}.`,
     };
+  }
+
+  if (!isFullAddress(deliveryAddress)) {
+    return { success: false, msg: FULL_ADDRESS_MSG };
   }
 
   // getting the user from cookie
@@ -173,6 +178,10 @@ export const updateAccountByAdmin = async (prevState, formData) => {
 
   if (!Number.isInteger(userId)) {
     return { success: false, msg: "Invalid user." };
+  }
+
+  if (deliveryAddress && !isFullAddress(deliveryAddress)) {
+    return { success: false, msg: FULL_ADDRESS_MSG };
   }
 
   // Only First Name, Last Name and Date of Birth are truly required.
@@ -299,6 +308,10 @@ export const updateAccountAction = async (prevState, formData) => {
 
   if (loggedInUserId.toString() !== userId) {
     return null
+  }
+
+  if (deliveryAddress && !isFullAddress(deliveryAddress)) {
+    return { success: false, msg: FULL_ADDRESS_MSG }
   }
 
   const updatedAcount = await prisma.account.upsert({

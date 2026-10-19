@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { normalisePostcode } from "@/lib/addressLookup";
+import { FULL_ADDRESS_MSG, isFullAddress, normalisePostcode } from "@/lib/addressLookup";
 
 let providerPromise;
 function getProvider() {
@@ -103,6 +103,7 @@ export default function AddressLookupInput({
       if (kind === "address") {
         const line = d.address?.line1 || item.label;
         setText(line);
+        setHint(isFullAddress(line) ? null : { ok: false, text: FULL_ADDRESS_MSG });
         onPick?.({ line1: line, postcode: d.address?.postcode || "" });
       } else {
         const pc = d.address?.postcode || item.label;
@@ -117,6 +118,10 @@ export default function AddressLookupInput({
 
   function onBlur() {
     setTimeout(() => setOpen(false), 150);
+    if (kind === "address" && !readOnly) {
+      const raw = String(text || "").trim();
+      return setHint(raw && !isFullAddress(raw) ? { ok: false, text: FULL_ADDRESS_MSG } : null);
+    }
     if (kind !== "postcode" || provider !== "postcodes" || readOnly) return;
     const raw = String(text || "").trim();
     if (!raw) return setHint(null);
@@ -187,6 +192,11 @@ export default function AddressLookupInput({
               {it.label}
             </li>
           ))}
+          {kind === "address" && normalisePostcode(text) && (
+            <li className="px-4 pt-1.5 pb-1 text-xs text-[#B4690E]" aria-hidden="true">
+              Start with your house number and street, e.g. 12 Pollards Hill North.
+            </li>
+          )}
           {provider === "google" && (
             <li className="px-4 pt-1 pb-1.5 text-right text-[11px] text-[#6B6660]" aria-hidden="true">
               Powered by Google
