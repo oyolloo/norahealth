@@ -130,7 +130,7 @@ export const createOrderByAdmin = async (prevState, formData) => {
     // order is created, so we don’t fail the action
   }
 
-  revalidatePath(`/admin/${userId}/orders`);
+  revalidatePath(`/admin/${userId}/account`);
 
   if (order) {
     return {

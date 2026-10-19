@@ -1,15 +1,9 @@
-import { OrderTable } from "./_components/order-table";
-import { getAllOrders } from "@/actions/order.action";
+import { redirect } from "next/navigation";
 
 const OrderPage = async ({ params }) => {
   const { id } = await params;
-  const orders = await getAllOrders(id);
-
-  return (
-    <>
-      <OrderTable orders={orders?.orders} userId={id} user={orders?.user} />
-    </>
-  );
+  // Orders now live on the combined patient record
+  redirect(`/admin/${id}/account#orders`);
 };
 
 export default OrderPage;

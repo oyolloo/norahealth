@@ -10,10 +10,8 @@ import { usePathname } from "next/navigation";
 // Sections of the combined patient record on /account
 const SECTIONS = [
   { id: "account-info", label: "Account Info" },
-  { id: "medical-records", label: "Medical Records" },
-  { id: "medical-history", label: "Medical History" },
-  { id: "medications", label: "Medications" },
   { id: "appointments", label: "Appointments" },
+  { id: "orders", label: "Orders" },
 ];
 
 const AdminNavigation = ({ userId }) => {
@@ -79,16 +77,6 @@ const AdminNavigation = ({ userId }) => {
                 </Button>
               ),
             )}
-            <Button
-              variant={
-                path.toString() === `/admin/${userId}/orders`
-                  ? "default"
-                  : "outline"
-              }
-              asChild
-            >
-              <Link href={`/admin/${userId}/orders`}>Orders</Link>
-            </Button>
           </ButtonGroup>
         </ButtonGroup>
       </div>
