@@ -65,7 +65,7 @@ import { deleteOrder, updateOrderStatus } from "@/actions/order.action";
 import AdminNavigation from "../../_components/admin-navigation";
 import { toast } from "sonner";
 
-export function OrderTable({ orders, userId, user }) {
+export function OrderTable({ orders, userId, user, embedded = false }) {
   const { setMenuOpen } = useAdmin();
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
@@ -262,23 +262,29 @@ export function OrderTable({ orders, userId, user }) {
   }, [actionState]);
 
   return (
-    <div className='w-full p-10'>
-      {/* HEADER */}
-      <div className='flex items-center gap-4 mb-4'>
-        <AdminNavigation userId={userId} />
-      </div>
-      <div className='flex items-center gap-4 mb-4'>
-        <button
-          onClick={() => setMenuOpen(true)}
-          className='lg:hidden w-[40px] h-[40px] bg-[#d67b0e] text-white flex justify-center items-center rounded-full'
-        >
-          <PanelLeft />
-        </button>
-        <h2 className='text-xl font-semibold'>Orders of {fullName}</h2>
-        <p className='text-sm text-muted-foreground'>
-          Date of Birth: {joinedDate}
-        </p>
-      </div>
+    <div className={embedded ? 'w-full' : 'w-full p-10'}>
+      {embedded ? (
+        <h2 className='text-xl font-semibold'>Orders</h2>
+      ) : (
+        <>
+          {/* HEADER */}
+          <div className='flex items-center gap-4 mb-4'>
+            <AdminNavigation userId={userId} />
+          </div>
+          <div className='flex items-center gap-4 mb-4'>
+            <button
+              onClick={() => setMenuOpen(true)}
+              className='lg:hidden w-[40px] h-[40px] bg-[#d67b0e] text-white flex justify-center items-center rounded-full'
+            >
+              <PanelLeft />
+            </button>
+            <h2 className='text-xl font-semibold'>Orders of {fullName}</h2>
+            <p className='text-sm text-muted-foreground'>
+              Date of Birth: {joinedDate}
+            </p>
+          </div>
+        </>
+      )}
 
       <div className='flex items-center py-4'>
         <CreateOrderForm />

@@ -7,20 +7,23 @@ import { getRecordByUserId } from '@/actions/record.action';
 import { getHistoryByUserId } from '@/actions/history.action';
 import { getMedicationByUserId } from '@/actions/medication.action';
 import { getPatientAppointmentsAction } from '@/actions/booking.action';
+import { getAllOrders } from '@/actions/order.action';
 import { RecordTable } from '../records/_components/record-table';
 import { HistoryTable } from '../history/_components/history-table';
 import { MedicationTable } from '../medications/_components/medication-table';
 import { AppointmentsTable } from '../appointments/_components/appointments-table';
+import { OrderTable } from '../orders/_components/order-table';
 
 const page = async ({ params }) => {
   const { id } = await params;
-  const [{ success, user }, records, history, medications, appointments] =
+  const [{ success, user }, records, history, medications, appointments, orders] =
     await Promise.all([
       getUserAccountInfobyid(id),
       getRecordByUserId(id),
       getHistoryByUserId(id),
       getMedicationByUserId(id),
       getPatientAppointmentsAction(id),
+      getAllOrders(id),
     ]);
 
   if (!success) {
@@ -110,6 +113,9 @@ const page = async ({ params }) => {
             error={appointments?.success ? null : appointments?.msg}
             embedded
           />
+        </section>
+        <section id="orders" className="scroll-mt-20">
+          <OrderTable orders={orders?.orders} userId={id} user={orders?.user} embedded />
         </section>
       </div>
     </div>

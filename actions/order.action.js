@@ -130,7 +130,7 @@ export const createOrderByAdmin = async (prevState, formData) => {
     // order is created, so we don’t fail the action
   }
 
-  revalidatePath(`/admin/${userId}/orders`);
+  revalidatePath(`/admin/${userId}/account`);
 
   if (order) {
     return {
@@ -543,6 +543,7 @@ export const updateOrderStatus = async (prevState, formData) => {
 
   revalidatePath(`/admin`);
   revalidatePath(`/admin/orders`);
+  revalidatePath(`/admin/${order.userId}/account`);
 
   return {
     success: true,
@@ -571,6 +572,7 @@ export const deleteOrder = async (formData) => {
     };
   }
   revalidatePath(`/admin`);
+  revalidatePath(`/admin/${order.userId}/account`);
 
   if (order) {
     return {
