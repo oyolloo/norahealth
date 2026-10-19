@@ -554,16 +554,16 @@ export const updateOrderStatus = async (prevState, formData) => {
 };
 
 export const deleteOrder = async (formData) => {
+  const adminUser = await getAdminUser();
+  if (!adminUser?.admin?.isAdmin) {
+    return { success: false, msg: "Unauthorized. Not an admin." };
+  }
+
   const orderId = formData.get("orderId");
 
   const order = await prisma.order.delete({
     where: { id: Number(orderId) },
   });
-
-  const adminUser = await getAdminUser();
-  if (!adminUser?.admin?.isAdmin) {
-    return { success: false, msg: "Unauthorized. Not an admin." };
-  }
 
   if (!order) {
     return {
