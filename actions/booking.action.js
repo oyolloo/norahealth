@@ -1,6 +1,7 @@
 "use server";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/client/prisma";
+import { FULL_ADDRESS_MSG, isFullAddress } from "@/lib/addressLookup";
 import { createCalendarEvent } from "@/lib/googleCalendar";
 import { revalidatePath } from "next/cache";
 import { orderFromBookingEmailTemplate, sendBookingConfirmationEmail, sendOrderBookingConfirmationEmail } from "@/lib/emailTemplate";
@@ -295,6 +296,10 @@ export async function createBookingOrder(formData) {
         msg: "Please fill in all required fields.",
         data: null,
       };
+    }
+
+    if (deliveryAddressInput && !isFullAddress(deliveryAddressInput)) {
+      return { success: false, msg: FULL_ADDRESS_MSG, data: null };
     }
 
     if (!bookingdate || !bookingtime) {

@@ -2,6 +2,7 @@
 
 import { verifyToken } from "@/lib/jwt/jwt";
 import { prisma } from "@/lib/client/prisma";
+import { FULL_ADDRESS_MSG, isFullAddress } from "@/lib/addressLookup";
 import { cookies } from "next/headers";
 import bcrypt from "bcrypt";
 import { revalidatePath } from "next/cache";
@@ -199,6 +200,10 @@ export const updateAccountByAdmin = async (prevState, formData) => {
       msg: "Please insert all the fields",
       success: false,
     };
+  }
+
+  if (deliveryAddress && !isFullAddress(deliveryAddress)) {
+    return { msg: FULL_ADDRESS_MSG, success: false };
   }
 
   const updatedAccount = await prisma.account.update({
