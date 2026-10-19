@@ -93,7 +93,7 @@ const page = async ({ params }) => {
         </div>
       </div>
 
-      <div className="space-y-10 px-6">
+      <div className="space-y-10 px-6 pb-10">
         <section id="medical-records" className="scroll-mt-20">
           <RecordTable record={records?.records} userId={id} user={user} embedded />
         </section>
