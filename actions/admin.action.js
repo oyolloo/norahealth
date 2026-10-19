@@ -222,7 +222,7 @@ export const updateAccountByAdmin = async (prevState, formData) => {
     },
   });
 
-  revalidatePath(`/admin/${userId}/accounts`);
+  revalidatePath(`/admin/${userId}/account`);
 
   if (updatedAccount) {
     return {

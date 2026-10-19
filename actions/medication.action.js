@@ -154,7 +154,7 @@ export const createMedicationByAdminAction = async (prevState, formData) => {
     },
   });
 
-  revalidatePath(`/admin/${userId}/medications`);
+  revalidatePath(`/admin/${userId}/account`);
 
   if (res) {
     return {
@@ -184,7 +184,7 @@ export const deleteMedicationByAdmin = async (formData) => {
     },
   });
 
-  revalidatePath(`/admin/${userId}/medications`);
+  revalidatePath(`/admin/${userId}/account`);
 
   if (res) {
     return {

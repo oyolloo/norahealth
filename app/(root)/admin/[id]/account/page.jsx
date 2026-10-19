@@ -3,10 +3,25 @@ import React from 'react';
 import AdminNavigation from '../_components/admin-navigation';
 import { formatShortDate } from '@/lib/utils';
 import { UpdateAccountForm } from '../_components/update-account';
+import { getRecordByUserId } from '@/actions/record.action';
+import { getHistoryByUserId } from '@/actions/history.action';
+import { getMedicationByUserId } from '@/actions/medication.action';
+import { getPatientAppointmentsAction } from '@/actions/booking.action';
+import { RecordTable } from '../records/_components/record-table';
+import { HistoryTable } from '../history/_components/history-table';
+import { MedicationTable } from '../medications/_components/medication-table';
+import { AppointmentsTable } from '../appointments/_components/appointments-table';
 
 const page = async ({ params }) => {
   const { id } = await params;
-  const { success, user } = await getUserAccountInfobyid(id);
+  const [{ success, user }, records, history, medications, appointments] =
+    await Promise.all([
+      getUserAccountInfobyid(id),
+      getRecordByUserId(id),
+      getHistoryByUserId(id),
+      getMedicationByUserId(id),
+      getPatientAppointmentsAction(id),
+    ]);
 
   if (!success) {
     return <div className="text-center text-red-500">User not found</div>;
@@ -73,6 +88,21 @@ const page = async ({ params }) => {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="space-y-10 px-6">
+        <RecordTable record={records?.records} userId={id} user={user} embedded />
+        <div className="grid grid-cols-1 gap-10 xl:grid-cols-2 [&>*]:min-w-0">
+          <HistoryTable history={history?.history} userId={id} user={user} embedded />
+          <MedicationTable medications={medications?.medication} userId={id} user={user} embedded />
+        </div>
+        <AppointmentsTable
+          userId={id}
+          user={user}
+          bookings={appointments?.bookings || []}
+          error={appointments?.success ? null : appointments?.msg}
+          embedded
+        />
       </div>
     </div>
   );

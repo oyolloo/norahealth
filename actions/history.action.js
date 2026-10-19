@@ -149,7 +149,7 @@ export const createHistoryByAdminAction = async (prevState, formData) => {
     },
   });
 
-  revalidatePath(`/admin/${userId}/history`);
+  revalidatePath(`/admin/${userId}/account`);
 
   if (res) {
     return {
@@ -179,5 +179,5 @@ export const deleteHistoryByAdmin = async (formData) => {
     },
   });
 
-  revalidatePath(`/admin/${userId}/history`);
+  revalidatePath(`/admin/${userId}/account`);
 };

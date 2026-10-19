@@ -1,18 +1,9 @@
-import { getPatientAppointmentsAction } from "@/actions/booking.action";
-import { AppointmentsTable } from "./_components/appointments-table";
+import { redirect } from "next/navigation";
 
-const AppointmentsPage = async ({ params }) => {
+// Folded into the combined patient record on /account (CC-5).
+const Page = async ({ params }) => {
   const { id } = await params;
-  const res = await getPatientAppointmentsAction(id);
-
-  return (
-    <AppointmentsTable
-      userId={id}
-      user={res?.user}
-      bookings={res?.bookings || []}
-      error={res?.success ? null : res?.msg}
-    />
-  );
+  redirect(`/admin/${id}/account`);
 };
 
-export default AppointmentsPage;
+export default Page;
