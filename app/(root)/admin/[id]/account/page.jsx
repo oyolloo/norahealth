@@ -29,14 +29,14 @@ const page = async ({ params }) => {
 
   return (
     <div className="container mx-auto p-10">
-        <div className='flex items-center gap-4 mb-4'>
+        <div className='sticky top-0 z-20 -mx-10 mb-4 flex items-center gap-4 bg-[#FAF9F8] px-10 py-3'>
                 <AdminNavigation userId={id} />
               </div>
 
               <UpdateAccountForm user={user} />
    
 
-      <div className=" rounded-lg p-6">
+      <div id="account-info" className="scroll-mt-20 rounded-lg p-6">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="w-full lg:w-1/3">
             <img
@@ -91,18 +91,26 @@ const page = async ({ params }) => {
       </div>
 
       <div className="space-y-10 px-6">
-        <RecordTable record={records?.records} userId={id} user={user} embedded />
+        <section id="medical-records" className="scroll-mt-20">
+          <RecordTable record={records?.records} userId={id} user={user} embedded />
+        </section>
         <div className="grid grid-cols-1 gap-10 xl:grid-cols-2 [&>*]:min-w-0">
-          <HistoryTable history={history?.history} userId={id} user={user} embedded />
-          <MedicationTable medications={medications?.medication} userId={id} user={user} embedded />
+          <section id="medical-history" className="scroll-mt-20">
+            <HistoryTable history={history?.history} userId={id} user={user} embedded />
+          </section>
+          <section id="medications" className="scroll-mt-20">
+            <MedicationTable medications={medications?.medication} userId={id} user={user} embedded />
+          </section>
         </div>
-        <AppointmentsTable
-          userId={id}
-          user={user}
-          bookings={appointments?.bookings || []}
-          error={appointments?.success ? null : appointments?.msg}
-          embedded
-        />
+        <section id="appointments" className="scroll-mt-20">
+          <AppointmentsTable
+            userId={id}
+            user={user}
+            bookings={appointments?.bookings || []}
+            error={appointments?.success ? null : appointments?.msg}
+            embedded
+          />
+        </section>
       </div>
     </div>
   );
