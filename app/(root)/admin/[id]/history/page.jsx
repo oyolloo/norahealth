@@ -1,20 +1,9 @@
-import AdminNavigation from "../_components/admin-navigation";
-import { HistoryTable } from "./_components/history-table";
-import { getHistoryByUserId } from "@/actions/history.action";
+import { redirect } from "next/navigation";
 
-const MedicalHistory = async ({ params }) => {
+// Folded into the combined patient record on /account (CC-5).
+const Page = async ({ params }) => {
   const { id } = await params;
-  const history = await getHistoryByUserId(id);
-
-  return (
-    <>
-      <HistoryTable
-        history={history?.history}
-        userId={id}
-        user={history?.user}
-      />
-    </>
-  );
+  redirect(`/admin/${id}/account`);
 };
 
-export default MedicalHistory;
+export default Page;

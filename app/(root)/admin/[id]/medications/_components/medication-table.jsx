@@ -130,7 +130,7 @@ export const columns = [
   },
 ];
 
-export function MedicationTable({ medications, userId, user }) {
+export function MedicationTable({ medications, userId, user, embedded = false }) {
   const { setMenuOpen } = useAdmin();
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
@@ -170,23 +170,29 @@ export function MedicationTable({ medications, userId, user }) {
   );
 
   return (
-    <div className='w-full p-10'>
-      <div className='flex items-center gap-4 mb-4'>
-        <AdminNavigation userId={userId} />
-      </div>
-      {/* HEADER */}
-      <div className='flex items-center gap-4 mb-4'>
-        <button
-          onClick={() => setMenuOpen(true)}
-          className='lg:hidden w-[40px] h-[40px] bg-[#d67b0e] text-white flex justify-center items-center rounded-full'
-        >
-          <PanelLeft />
-        </button>
-        <h2 className='text-xl font-semibold'>Medications of {fullName}</h2>
-        <p className='text-sm text-muted-foreground'>
-          Date of Birth: {joinedDate}
-        </p>
-      </div>
+    <div className={embedded ? 'w-full' : 'w-full p-10'}>
+      {embedded ? (
+        <h2 className='text-xl font-semibold'>Medications</h2>
+      ) : (
+        <>
+          <div className='flex items-center gap-4 mb-4'>
+            <AdminNavigation userId={userId} />
+          </div>
+          {/* HEADER */}
+          <div className='flex items-center gap-4 mb-4'>
+            <button
+              onClick={() => setMenuOpen(true)}
+              className='lg:hidden w-[40px] h-[40px] bg-[#d67b0e] text-white flex justify-center items-center rounded-full'
+            >
+              <PanelLeft />
+            </button>
+            <h2 className='text-xl font-semibold'>Medications of {fullName}</h2>
+            <p className='text-sm text-muted-foreground'>
+              Date of Birth: {joinedDate}
+            </p>
+          </div>
+        </>
+      )}
 
       <div className='flex items-center py-4'>
         <CreateMedicationForm />

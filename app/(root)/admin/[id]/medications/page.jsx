@@ -1,19 +1,9 @@
-import { MedicationTable } from "./_components/medication-table";
-import { getMedicationByUserId } from "@/actions/medication.action";
+import { redirect } from "next/navigation";
 
-const MedicationPage = async ({ params }) => {
+// Folded into the combined patient record on /account (CC-5).
+const Page = async ({ params }) => {
   const { id } = await params;
-  const medications = await getMedicationByUserId(id);
-
-  return (
-    <>
-      <MedicationTable
-        medications={medications?.medication}
-        userId={id}
-        user={medications?.user}
-      />
-    </>
-  );
+  redirect(`/admin/${id}/account`);
 };
 
-export default MedicationPage;
+export default Page;

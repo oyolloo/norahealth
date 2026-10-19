@@ -183,7 +183,7 @@ export const createRecordByAdmin = async (prevState, formData) => {
     },
   });
 
-  revalidatePath(`/admin/${userId}/records`);
+  revalidatePath(`/admin/${userId}/account`);
 
   if (record) {
     return {
@@ -213,5 +213,5 @@ export const deleteRecordByAdmin = async (formData) => {
     },
   });
 
-  revalidatePath(`/admin/${userId}/records`);
+  revalidatePath(`/admin/${userId}/account`);
 };

@@ -1,15 +1,9 @@
-import { RecordTable } from "./_components/record-table";
-import { getRecordByUserId } from "@/actions/record.action";
+import { redirect } from "next/navigation";
 
-const Records = async ({ params }) => {
+// Folded into the combined patient record on /account (CC-5).
+const Page = async ({ params }) => {
   const { id } = await params;
-  const records = await getRecordByUserId(id);
-
-  return (
-    <>
-      <RecordTable record={records?.records} userId={id} user={records?.user} />
-    </>
-  );
+  redirect(`/admin/${id}/account`);
 };
 
-export default Records;
+export default Page;
