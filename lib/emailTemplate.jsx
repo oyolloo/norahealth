@@ -489,8 +489,8 @@ export async function sendBookingConfirmationEmail({
   appointmentEnd,
   notes,
 }) {
-  const whatsappLink = "https://wa.me/447440126154";
-  const whatsappNumber = "+44 7440126154";
+  const whatsappLink = "https://wa.me/447737984422";
+  const whatsappNumber = "+44 7737 984422";
   const supportEmail = "pharmacy.fap80@nhs.net";
 
   // Google/Outlook buttons + .ics attachment for this appointment slot.
@@ -560,7 +560,7 @@ export async function sendOrderBookingConfirmationEmail({
     ? appointmentCalendar({
         stored: appointment,
         fullName,
-        whatsappNumber: "+44 7440126154",
+        whatsappNumber: "+44 7737 984422",
         supportEmail: "pharmacy.fap80@nhs.net",
       })
     : null;
