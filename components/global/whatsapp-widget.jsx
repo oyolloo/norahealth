@@ -1,4 +1,4 @@
-const WHATSAPP_NUMBER = "447440126154";
+const WHATSAPP_NUMBER = "447737984422";
 
 export default function WhatsAppWidget() {
   return (
