@@ -15,6 +15,8 @@ import {
   Send,
   UserPlus,
   Wallet,
+  ExternalLink,
+  TriangleAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +45,11 @@ import { MAX_SEGMENTS, renderText, segmentsOf } from "@/lib/smsCore";
 
 const initial = { success: null, msg: "" };
 const SAMPLE = { first_name: "Emma", time_frame: "3pm and 4pm", appt_time: "3pm-4pm" };
+const RECALLO24_DASHBOARD = "https://recallo24.oyolloo.com/dashboard";
+const RECALLO24_BILLING = "https://recallo24.oyolloo.com/dashboard/billing";
+// Below this many credits the page asks the admin to top up.
+const LOW_CREDITS = 50;
+
 const themeBtn = "bg-theme hover:bg-[#B4690E] text-white";
 
 // Shows each server action result as a toast, like the order pages do.
@@ -142,16 +149,62 @@ function Stat({ icon: Icon, label, children }) {
   );
 }
 
+function CreditAlert({ credits }) {
+  if (typeof credits !== "number" || credits >= LOW_CREDITS) return null;
+  const empty = credits <= 0;
+  return (
+    <div
+      role="alert"
+      className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+        empty ? "border-[#F1C9C4] bg-[#FBE7E5] text-[#9B2C22]" : "border-[#EBD3B4] bg-[#FBF0E2] text-[#8A5A12]"
+      }`}
+    >
+      <p className="flex items-start gap-2 text-sm min-w-0">
+        <TriangleAlert className="size-4 shrink-0 mt-0.5" />
+        <span>
+          {empty
+            ? "You are out of SMS credit. No messages can be sent until you top up."
+            : `SMS credit is running low: ${credits} left. Top up soon so messages keep going out.`}
+        </span>
+      </p>
+      <Button asChild size="sm" className={themeBtn}>
+        <a href={RECALLO24_BILLING} target="_blank" rel="noopener noreferrer">
+          Top up credit <ExternalLink />
+        </a>
+      </Button>
+    </div>
+  );
+}
+
 export function ConnectionPanel({ enabled, hasKey, keyHint, ready, balance, cronReady }) {
   const [on, setOn] = useState(enabled);
+  const [keyText, setKeyText] = useState("");
+  const [clearKey, setClearKey] = useState(false);
   const [state, action, saving] = useActionState(saveConnectionAction, initial);
   useToastResult(state);
+  useEffect(() => {
+    if (state?.success) {
+      setKeyText("");
+      setClearKey(false);
+    }
+  }, [state]);
+  // Save is active only when there is something to save: a pasted key, a
+  // changed switch, or "remove the saved key" ticked.
+  const changed = keyText.trim() !== "" || on !== enabled || clearKey;
   return (
     <section className="rounded-2xl border border-[#ECE7E1] bg-white p-5 md:p-6 flex flex-col gap-5 min-w-0">
-      <div>
-        <h3 className="text-base font-semibold text-heading">SMS connection</h3>
-        <p className="text-sm text-[#6B6660]">The main switch and the Recallo24 account the texts are sent from.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-heading">SMS connection</h3>
+          <p className="text-sm text-[#6B6660]">The main switch and the Recallo24 account the texts are sent from.</p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <a href={RECALLO24_DASHBOARD} target="_blank" rel="noopener noreferrer">
+            Open Recallo24 dashboard <ExternalLink />
+          </a>
+        </Button>
       </div>
+      <CreditAlert credits={balance?.credits} />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Stat icon={KeyRound} label="Recallo24 account">
           {hasKey ? `Connected (key ${keyHint})` : "Not connected"}
@@ -183,18 +236,33 @@ export function ConnectionPanel({ enabled, hasKey, keyHint, ready, balance, cron
               autoComplete="off"
               spellCheck={false}
               placeholder={hasKey ? `Saved (${keyHint}). Paste a new key to replace it.` : "rk_live_..."}
+              value={keyText}
+              onChange={(e) => setKeyText(e.target.value)}
               className="bg-white"
             />
           </div>
-          <Button type="submit" className={themeBtn} disabled={saving || !ready}>
+          <Button type="submit" className={themeBtn} disabled={saving || !ready || !changed}>
             {saving ? "Saving..." : "Save"}
           </Button>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#6B6660]">
-          <span>Create the key in Recallo24 under Settings, API keys. It is kept on the server only.</span>
+          <span>
+            Create the key in the{" "}
+            <a href={RECALLO24_DASHBOARD} target="_blank" rel="noopener noreferrer" className="text-theme underline-offset-2 hover:underline">
+              Recallo24 dashboard
+            </a>{" "}
+            under Settings, API keys. It is kept on the server only.
+          </span>
           {hasKey && (
             <label htmlFor="sms-clearKey" className="flex items-center gap-2 text-[#3A3D42]">
-              <input id="sms-clearKey" name="clearKey" type="checkbox" className="size-4 accent-[#CD8936]" />
+              <input
+                id="sms-clearKey"
+                name="clearKey"
+                type="checkbox"
+                checked={clearKey}
+                onChange={(e) => setClearKey(e.target.checked)}
+                className="size-4 accent-[#CD8936]"
+              />
               Remove the saved key
             </label>
           )}
