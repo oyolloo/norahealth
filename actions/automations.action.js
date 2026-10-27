@@ -66,10 +66,12 @@ export async function saveConnectionAction(_prev, formData) {
     const res = await getBalance(typed);
     if (!res.ok) return { success: false, msg: `Not saved. Recallo24 refused the key: ${res.error}` };
   }
+  // Restart the clock whenever SMS goes from off to on, so patients who
+  // signed up while it was off never get a late sign-up text.
   await setSmsSettings({
     [SMS_KEYS.enabled]: enabled,
     [SMS_KEYS.apiKey]: clearKey || typed ? key : undefined,
-    [SMS_KEYS.startedAt]: enabled && !current.startedAt ? new Date().toISOString() : undefined,
+    [SMS_KEYS.startedAt]: enabled && !current.enabled ? new Date().toISOString() : undefined,
   });
   revalidatePath(PATH);
   return {
@@ -94,7 +96,9 @@ export async function saveAutomationAction(_prev, formData) {
     if (!Number.isInteger(hour) || hour < 6 || hour > 21)
       return { success: false, msg: "Pick a send time between 6am and 9pm." };
   }
+  const before = (await getSmsSettings()).automations.find((x) => x.id === a.id);
   await setSmsSettings({
+    [SMS_KEYS.auto(a.id, "since")]: enabled && !before?.enabled ? new Date().toISOString() : undefined,
     [SMS_KEYS.auto(a.id, "enabled")]: enabled,
     [SMS_KEYS.auto(a.id, "text")]: text,
     [SMS_KEYS.auto(a.id, "hour")]: hour,
@@ -160,6 +164,7 @@ export async function sendMissedCallAction(_prev, formData) {
   const s = await getSmsSettings();
   const a = s.automations.find((x) => x.id === "5");
   if (!s.apiKey) return { success: false, msg: "Save the Recallo24 API key first." };
+  if (!s.enabled) return { success: false, msg: "SMS is switched off. Turn on Send SMS at the top first." };
   if (!a.enabled) return { success: false, msg: "Switch on the Missed call SMS first." };
   const userId = Number(formData.get("userId"));
   const user = userId
@@ -170,14 +175,15 @@ export async function sendMissedCallAction(_prev, formData) {
     : null;
   if (!user?.account) return { success: false, msg: "Pick a patient first." };
 
-  // Double-click guard: one missed-call text per patient per 10 minutes.
+  // Double-click guard: one missed-call text per patient per 10 minutes. The
+  // bucketed key also stops two clicks that arrive at the same moment.
   const recent = await prisma.smsLog.findFirst({
     where: { automation: "5", userId: user.id, createdAt: { gte: new Date(Date.now() - 10 * 60_000) } },
   });
   if (recent) return { success: false, msg: "A missed-call SMS went to this patient in the last 10 minutes." };
 
   const r = await sendOne(s, {
-    key: `5:user:${user.id}:${randomUUID()}`,
+    key: `5:user:${user.id}:${Math.floor(Date.now() / 600_000)}`,
     automation: "5",
     phone: user.account.phoneNumber,
     text: a.text,
@@ -204,6 +210,7 @@ export async function addOptOutAction(_prev, formData) {
 
 export async function removeOptOutAction(formData) {
   if (!(await getAdminUser())) return DENIED;
+  if (!(await tablesReady())) return NOT_READY;
   const phone = String(formData.get("phone") || "");
   await prisma.smsOptOut.deleteMany({ where: { phone } });
   revalidatePath(PATH);
