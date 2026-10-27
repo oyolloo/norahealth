@@ -12,6 +12,7 @@ import {
   Calendar,
   ChartColumn,
   Settings,
+  MessageSquareText,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -61,6 +62,12 @@ const NAV_ITEMS = [
     label: "Blogs",
     Icon: NotebookPen,
     isActive: (p) => p.startsWith("/admin/blog"),
+  },
+  {
+    href: "/admin/automations",
+    label: "Automations",
+    Icon: MessageSquareText,
+    isActive: (p) => p.startsWith("/admin/automations"),
   },
   {
     href: "/admin/settings",
