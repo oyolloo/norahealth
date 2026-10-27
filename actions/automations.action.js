@@ -6,7 +6,7 @@ import { getAdminUser } from "./admin.action";
 import { getSmsSettings, setSmsSettings, SMS_KEYS } from "@/lib/smsSettings";
 import { getBalance } from "@/lib/recallo24";
 import { sendOne } from "@/lib/smsRunner";
-import { automationById, firstName, toE164Uk } from "@/lib/smsCore";
+import { automationById, firstName, MAX_SEGMENTS, segmentsOf, toE164Uk } from "@/lib/smsCore";
 
 const PATH = "/admin/automations";
 const DENIED = { success: false, msg: "Unauthorized. User is not admin" };
@@ -88,6 +88,12 @@ export async function saveAutomationAction(_prev, formData) {
   const text = String(formData.get("text") || "").trim();
   if (!text) return { success: false, msg: "The SMS text can't be empty." };
   if (text.length > 900) return { success: false, msg: "The SMS text is too long (900 characters max)." };
+  // Recallo24 refuses texts over 6 SMS parts. Measure with a long sample name.
+  if (segmentsOf(text.replace(/\{[^}]*\}/g, "Christopher-James")) > MAX_SEGMENTS)
+    return {
+      success: false,
+      msg: `This text is too long: over ${MAX_SEGMENTS} SMS parts. Shorten it, or remove special symbols such as • or emoji, which make each part much shorter.`,
+    };
   const enabled = formData.get("enabled") === "on";
   if (enabled && !a.ready) return { success: false, msg: "This automation can't be switched on yet." };
   let hour;

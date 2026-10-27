@@ -39,7 +39,7 @@ import {
   sendMissedCallAction,
   sendTestAction,
 } from "@/actions/automations.action";
-import { renderText, segmentsOf } from "@/lib/smsCore";
+import { MAX_SEGMENTS, renderText, segmentsOf } from "@/lib/smsCore";
 
 const initial = { success: null, msg: "" };
 const SAMPLE = { first_name: "Emma", time_frame: "3pm and 4pm", appt_time: "3pm-4pm" };
@@ -352,6 +352,12 @@ function MessageRow({ a, ready, smsOn }) {
                 {a.id === "2" || a.id === "4a" ? ", {time_frame}" : ""}
                 {a.id === "3" ? ", {appt_time}" : ""}.
               </p>
+              {parts > MAX_SEGMENTS && (
+                <p className="text-xs text-[#9B2C22]">
+                  Too long to send: the limit is {MAX_SEGMENTS} SMS parts. Special symbols such as • or emoji make each
+                  part much shorter.
+                </p>
+              )}
             </div>
             {hour !== undefined && (
               <div className="flex flex-col gap-1.5">
