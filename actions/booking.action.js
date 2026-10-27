@@ -1227,6 +1227,12 @@ export async function updateBookingStatus(formDataOrObj) {
       select: { id: true, bookingStatus: true, bookingType: true },
     });
 
+    // CC-9: remember when the status changed (failed-encounter SMS). Separate
+    // and guarded so a missing column can never break the status update.
+    await prisma.booking
+      .update({ where: { id: idNum }, data: { statusChangedAt: new Date() } })
+      .catch((err) => console.error("statusChangedAt not saved:", err?.message));
+
     // ✅ revalidate (adjust your routes)
     revalidatePath("/admin/appointments"); // Booking list
     revalidatePath("/admin/appointments-order"); // if you have this route

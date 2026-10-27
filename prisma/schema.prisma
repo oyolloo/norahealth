@@ -157,6 +157,9 @@ model Booking {
   slotId Int?
   slot   BookingSlot? @relation(fields: [slotId], references: [id])
 
+  // Set when bookingStatus changes (CC-9, failed-encounter SMS).
+  statusChangedAt DateTime?
+
   @@index([slotId])
 }
 
@@ -218,4 +221,32 @@ model AppSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// SMS automations (CC-9). One row per SMS attempt; `key` makes each
+// automation send at most once per patient/booking.
+model SmsLog {
+  id         Int      @id @default(autoincrement())
+  key        String   @unique
+  automation String
+  userId     Int?
+  bookingId  Int?
+  to         String
+  body       String
+  status     String   @default("sending")
+  recalloId  String?
+  error      String?
+  sentBy     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([automation, createdAt])
+  @@index([createdAt])
+}
+
+// Phone numbers (E.164) that asked not to get texts.
+model SmsOptOut {
+  phone     String   @id
+  note      String?
+  createdAt DateTime @default(now())
 }
