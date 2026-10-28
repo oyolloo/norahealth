@@ -467,7 +467,7 @@ export default function MergedOcOrdersTable() {
   ];
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
-  const COLSPAN = 7; // primary cols: Name, Phone, Appt, Type, Call Status, Order Status, Actions
+  const COLSPAN = 8; // primary cols: Name, Phone, Appt, Type, Call Status, Order Status, Order Type, Actions
 
   // Inline status changes — edit right in the table cell (no dialog). Save on
   // select, toast "Saved", then refresh the rows.
@@ -662,6 +662,7 @@ export default function MergedOcOrdersTable() {
               <TableHead>Type</TableHead>
               <TableHead>Call Status</TableHead>
               <TableHead>Order Status</TableHead>
+              <TableHead>Order Type</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -805,6 +806,18 @@ export default function MergedOcOrdersTable() {
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
+                      </TableCell>
+                      {/* Order Type: came in through a booked appointment, or an order on its own */}
+                      <TableCell>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${
+                            r.booking
+                              ? "border-[#EBD3B4] bg-[#FBF0E2] text-[#8A5A12]"
+                              : "border-[#C9D8F0] bg-[#EEF3FB] text-[#2B5DA8]"
+                          }`}
+                        >
+                          {r.booking ? "Appointment" : "Order"}
+                        </span>
                       </TableCell>
                       <TableCell
                         className="text-right"
