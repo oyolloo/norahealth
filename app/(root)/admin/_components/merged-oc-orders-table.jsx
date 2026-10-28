@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -300,6 +301,31 @@ function pairByPatient(bookings, orders) {
 
 const PAGE_SIZE = 10;
 
+// Last result per date filter, kept for this browser tab. A revisit shows it
+// at once and refreshes quietly in the background, instead of an empty table.
+const rowsCache = new Map();
+
+// Placeholder rows in the table's own layout while the first load runs.
+function SkeletonRows({ cols }) {
+  return Array.from({ length: PAGE_SIZE }, (_, i) => (
+    <TableRow key={`sk-${i}`} className="hover:bg-transparent">
+      <TableCell className="py-4"><Skeleton className="h-4 w-28" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+      <TableCell>
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="mt-1.5 h-3 w-28" />
+      </TableCell>
+      <TableCell><Skeleton className="h-4 w-10" /></TableCell>
+      <TableCell><Skeleton className="h-5 w-24 rounded-full" /></TableCell>
+      <TableCell><Skeleton className="h-5 w-24 rounded-full" /></TableCell>
+      <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+      {cols > 7 ? (
+        <TableCell className="text-right"><Skeleton className="ml-auto h-4 w-6" /></TableCell>
+      ) : null}
+    </TableRow>
+  ));
+}
+
 export default function MergedOcOrdersTable() {
   const { setMenuOpen } = useAdmin();
 
@@ -310,8 +336,8 @@ export default function MergedOcOrdersTable() {
   const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
   const [nameSearch, setNameSearch] = useState("");
 
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState(() => rowsCache.get("||") || []);
+  const [loading, setLoading] = useState(() => !rowsCache.has("||"));
   const [pageIndex, setPageIndex] = useState(0);
   const [expanded, setExpanded] = useState(() => new Set()); // expanded row keys
 
@@ -349,7 +375,11 @@ export default function MergedOcOrdersTable() {
   const [deleting, setDeleting] = useState(false);
 
   async function fetchAll() {
-    setLoading(true);
+    const cacheKey = `${year}|${month}|${day}`;
+    const cached = rowsCache.get(cacheKey);
+    if (cached) setRows(cached);
+    // Skeleton only when there is nothing to show yet.
+    setLoading(!cached);
     try {
       const [bookingRes, orderRes] = await Promise.all([
         getAllBookingOrdersAction({
@@ -398,11 +428,12 @@ export default function MergedOcOrdersTable() {
         return (b.createdAt || 0) - (a.createdAt || 0); // then newest activity
       });
 
+      rowsCache.set(cacheKey, combined);
       setRows(combined);
-      setPageIndex(0);
+      if (!cached) setPageIndex(0);
     } catch (err) {
       console.error(err);
-      setRows([]);
+      if (!cached) setRows([]);
     } finally {
       setLoading(false);
     }
@@ -529,7 +560,7 @@ export default function MergedOcOrdersTable() {
         </button>
         <h2 className="text-xl font-semibold">OC Orders</h2>
         <Badge variant="outline" className="ml-1">
-          {filtered.length}
+          {loading ? "…" : filtered.length}
         </Badge>
       </div>
 
@@ -669,17 +700,7 @@ export default function MergedOcOrdersTable() {
 
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={COLSPAN} className="h-24 text-center">
-                  <div className="flex h-[30vh] w-full items-center justify-center">
-                    <LoaderIcon
-                      role="status"
-                      aria-label="Loading"
-                      className="size-5 animate-spin"
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
+              <SkeletonRows cols={COLSPAN} />
             ) : pageRows.length ? (
               pageRows.map((r) => {
                 const isOpen = expanded.has(r.key);
@@ -914,7 +935,7 @@ export default function MergedOcOrdersTable() {
           Previous
         </Button>
         <div className="text-sm text-muted-foreground">
-          Page {safePageIndex + 1} of {totalPages} ({filtered.length} total)
+          {loading ? "Loading…" : `Page ${safePageIndex + 1} of ${totalPages} (${filtered.length} total)`}
         </div>
         <Button
           variant="outline"
