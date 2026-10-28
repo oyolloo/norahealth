@@ -132,7 +132,6 @@ export function FutureApptCell({ order }) {
   const state = futureApptState(order, today);
   const day = dayOf(order.futureApptAt);
 
-  if (state === "none") return <span className='text-muted-foreground'>—</span>;
   if (state === "past")
     return (
       <span className='flex items-center gap-2 text-muted-foreground' title='This appointment date has passed'>
