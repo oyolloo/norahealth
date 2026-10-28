@@ -10,7 +10,10 @@ const RegisterPage = async () => {
   const payload = await loggedInUserAction();
 
   if (payload?.payload?.email) {
-    redirect("/account");
+    // Registering sets the login cookie and Next re-renders this page before
+    // the form's own redirect runs, so this redirect decides where a new
+    // patient lands (client: straight to ordering).
+    redirect("/booking/order");
   }
   return (
     <>
