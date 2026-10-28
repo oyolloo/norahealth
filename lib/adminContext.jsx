@@ -6,9 +6,10 @@ const AdminContext = createContext();
 
 export const AdminProvider = ({ children }) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  // Desktop-only: minimise the sidebar to an icon rail. Persists across
-  // in-admin navigation (provider stays mounted); reset on full reload.
-  const [collapsed, setCollapsed] = useState(false);
+  // Desktop-only: the sidebar starts as an icon rail and opens over the page
+  // on hover. The toggle pins it open. Persists across in-admin navigation
+  // (provider stays mounted); reset to the rail on full reload.
+  const [collapsed, setCollapsed] = useState(true);
   const pathname = usePathname();
 
   // Close mobile menu whenever pathname changes
