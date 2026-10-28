@@ -145,7 +145,9 @@ const RegisterForm = () => {
     if (state.msg) {
       if (state.success) {
         toast.success(state.msg);
-        router.push("/health");
+        // New patients go straight to ordering (client request); health details
+        // stay optional and can be filled in later from the profile.
+        router.push("/booking/order");
       } else {
         toast.warning(state.msg);
       }
