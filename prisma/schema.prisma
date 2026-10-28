@@ -81,6 +81,10 @@ model Order {
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId       Int
   createdAt    DateTime    @default(now())
+  // Future Appt (CC-10): the next OC review, set by staff on the order.
+  futureApptAt   DateTime?
+  futureApptDays Int?
+  futureApptTime String?
 }
 
 enum OrderStatus {

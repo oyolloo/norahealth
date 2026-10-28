@@ -64,6 +64,7 @@ import { useAdmin } from "@/lib/adminContext";
 import { deleteOrder, updateOrderStatus } from "@/actions/order.action";
 import AdminNavigation from "../../_components/admin-navigation";
 import { toast } from "sonner";
+import { FutureApptCell } from "./future-appt-cell";
 
 export function OrderTable({ orders, userId, user, embedded = false }) {
   const { setMenuOpen } = useAdmin();
@@ -154,6 +155,12 @@ export function OrderTable({ orders, userId, user, embedded = false }) {
           {formatDate(row.getValue("createdAt"))}
         </div>
       ),
+    },
+
+    {
+      id: "futureAppt",
+      header: "Future Appt",
+      cell: ({ row }) => <FutureApptCell order={row.original} />,
     },
 
     {

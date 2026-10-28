@@ -275,7 +275,7 @@ export function ConnectionPanel({ enabled, hasKey, keyHint, ready, balance, cron
 const GROUPS = [
   { title: "After sign-up", hint: "Only for people who sign up after the message is switched on.", ids: ["1a", "1b"] },
   { title: "Appointments", hint: "Uses the booking and order slots.", ids: ["2", "3"] },
-  { title: "OC reviews", hint: "Needs the Future Appt Date on orders first.", ids: ["4a", "4b"] },
+  { title: "OC reviews", hint: "Set from the Future Appt column on a patient's orders.", ids: ["4a", "4b"] },
   { title: "Sent by your team", hint: "Only goes out when someone presses send.", ids: ["5"] },
 ];
 
