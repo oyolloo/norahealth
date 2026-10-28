@@ -693,7 +693,7 @@ export default function MergedOcOrdersTable() {
               <TableHead>Type</TableHead>
               <TableHead>Call Status</TableHead>
               <TableHead>Order Status</TableHead>
-              <TableHead>Order Type</TableHead>
+              <TableHead>Column Type</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -828,7 +828,7 @@ export default function MergedOcOrdersTable() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      {/* Order Type: came in through a booked appointment, or an order on its own */}
+                      {/* Column Type: came in through a booked appointment, or an order on its own */}
                       <TableCell>
                         <span
                           className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${
