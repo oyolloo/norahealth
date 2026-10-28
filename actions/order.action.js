@@ -250,9 +250,14 @@ export async function getAllOrdersAction({
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
         where,
+        // Only the fields the table shows: smaller and faster than the whole
+        // user + account rows. The returned shape below is unchanged.
         include: {
           user: {
-            include: { account: true },
+            select: {
+              email: true,
+              account: { select: { firstName: true, lastName: true, phoneNumber: true } },
+            },
           },
         },
         orderBy: { createdAt: "desc" },
