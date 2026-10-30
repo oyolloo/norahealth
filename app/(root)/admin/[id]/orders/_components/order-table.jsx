@@ -65,6 +65,7 @@ import { deleteOrder, updateOrderStatus } from "@/actions/order.action";
 import AdminNavigation from "../../_components/admin-navigation";
 import { toast } from "sonner";
 import { FutureApptCell } from "./future-appt-cell";
+import { OrderStatusInline } from "../../_components/inline-status";
 
 export function OrderTable({ orders, userId, user, embedded = false }) {
   const { setMenuOpen } = useAdmin();
@@ -128,6 +129,9 @@ export function OrderTable({ orders, userId, user, embedded = false }) {
       },
       cell: ({ row }) => {
         const orderStatus = row.getValue("status");
+        // Click the pill to change it (same as OC Orders).
+        if (["clinicalreview", "posted", "declined"].includes(orderStatus))
+          return <OrderStatusInline order={row.original} />;
 
         return (
           <div>

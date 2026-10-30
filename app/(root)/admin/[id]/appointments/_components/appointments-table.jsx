@@ -14,6 +14,7 @@ import { useAdmin } from "@/lib/adminContext";
 import { formatDate, formatShortDate, getFullName } from "@/lib/utils";
 import { ocTypeLabel } from "@/lib/ocType";
 import AdminNavigation from "../../_components/admin-navigation";
+import { BookingStatusInline } from "../../_components/inline-status";
 
 const OC_TEXT = {
   SAME_OC: "I would like to order a pill which I am currently taking",
@@ -142,7 +143,7 @@ export function AppointmentsTable({ userId, user, bookings, error, embedded = fa
                       {b.phoneNumber || "—"}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge value={b.bookingStatus} />
+                      <BookingStatusInline booking={b} />
                     </TableCell>
                   </TableRow>
                 );
