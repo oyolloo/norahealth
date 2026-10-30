@@ -41,7 +41,7 @@ import {
   sendMissedCallAction,
   sendTestAction,
 } from "@/actions/automations.action";
-import { MAX_SEGMENTS, renderText, segmentsOf, smsLimit, toE164Uk } from "@/lib/smsCore";
+import { CREDITS_PER_SEGMENT, MAX_SEGMENTS, renderText, segmentsOf, smsLimit, toE164Uk } from "@/lib/smsCore";
 
 const initial = { success: null, msg: "" };
 const SAMPLE = { first_name: "Emma", time_frame: "3pm and 4pm", appt_time: "3pm-4pm" };
@@ -380,7 +380,7 @@ function MessageRow({ a, ready, smsOn }) {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-[#6B6660] min-w-0">
-          {a.ready ? a.conditions : a.waiting} · {savedParts} SMS credit{savedParts === 1 ? "" : "s"} each
+          {a.ready ? a.conditions : a.waiting} · {savedParts} SMS part{savedParts === 1 ? "" : "s"} ({savedParts * CREDITS_PER_SEGMENT} credits) each
           {on && !smsOn ? " · waiting for the main switch" : ""}
         </p>
         <Button
@@ -415,7 +415,7 @@ function MessageRow({ a, ready, smsOn }) {
                 className="w-full resize-y rounded-md border border-input bg-white px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               />
               <p className="text-xs text-[#6B6660]">
-                {text.length} characters, {parts} SMS credit{parts === 1 ? "" : "s"} per patient. You can use{" "}
+                {text.length} characters, {parts} SMS part{parts === 1 ? "" : "s"} ({parts * CREDITS_PER_SEGMENT} credits) per patient. You can use{" "}
                 {"{first_name}"}
                 {a.id === "2" || a.id === "4a" ? ", {time_frame}" : ""}
                 {a.id === "3" ? ", {appt_time}" : ""}.
@@ -699,8 +699,8 @@ export function TestSmsForm({ automations, ready }) {
             />
             <p className={`flex justify-between gap-2 text-xs ${limit.used >= limit.max ? "text-[#9B2C22]" : "text-[#6B6660]"}`}>
               <span>
-                {parts} SMS {parts === 1 ? "credit" : "credits"} per number
-                {phones.length > 1 ? ` · ${parts * phones.length} total` : ""}
+                {parts} SMS part{parts === 1 ? "" : "s"} = {parts * CREDITS_PER_SEGMENT} credits per number
+                {phones.length > 1 ? ` · ${parts * CREDITS_PER_SEGMENT * phones.length} credits total` : ""}
                 {!limit.gsm && text ? " · special characters shorten the limit" : ""}
               </span>
               <span className="shrink-0">
