@@ -335,6 +335,8 @@ export default function MergedOcOrdersTable() {
   const [callStatusFilter, setCallStatusFilter] = useState("ALL");
   const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
   const [nameSearch, setNameSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("ALL"); // ALL | appointment | order
+  const [quick, setQuick] = useState("ALL"); // ALL | today | upcoming | missed
 
   const [rows, setRows] = useState(() => rowsCache.get("||") || []);
   const [loading, setLoading] = useState(() => !rowsCache.has("||"));
@@ -447,7 +449,16 @@ export default function MergedOcOrdersTable() {
   // Client-side type + name filtering on top of the merged set.
   const filtered = useMemo(() => {
     const q = nameSearch.trim().toLowerCase();
+    const qDigits = q.replace(/\D/g, "");
+    const londonDay = (d) => new Date(d).toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+    const today = londonDay(Date.now());
+    const now = Date.now();
     return rows.filter((r) => {
+      if (typeFilter === "appointment" && !r.booking) return false;
+      if (typeFilter === "order" && r.booking) return false;
+      if (quick === "today" && !(r.appointment && londonDay(r.appointment) === today)) return false;
+      if (quick === "upcoming" && !(r.appointment && new Date(r.appointment).getTime() > now)) return false;
+      if (quick === "missed" && r.booking?.bookingStatus !== "FailedEncounter") return false;
       if (
         callStatusFilter !== "ALL" &&
         (!r.booking || r.booking.bookingStatus !== callStatusFilter)
@@ -458,10 +469,20 @@ export default function MergedOcOrdersTable() {
         (!r.order || r.order.status !== orderStatusFilter)
       )
         return false;
-      if (q && !String(r.fullName).toLowerCase().includes(q)) return false;
+      if (q) {
+        // Name, email, phone (digits only, so spaces don't matter) or booking/order ID.
+        const text = `${r.fullName || ""} ${r.email || ""}`.toLowerCase();
+        const phone = String(r.phoneNumber || "").replace(/\D/g, "");
+        const ids = [r.booking?.id, r.order?.id].filter(Boolean).map(String);
+        const hit =
+          text.includes(q) ||
+          (qDigits.length >= 3 && phone.includes(qDigits)) ||
+          ids.includes(q.replace(/^#/, ""));
+        if (!hit) return false;
+      }
       return true;
     });
-  }, [rows, callStatusFilter, orderStatusFilter, nameSearch]);
+  }, [rows, callStatusFilter, orderStatusFilter, nameSearch, typeFilter, quick]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePageIndex = Math.min(pageIndex, totalPages - 1);
@@ -472,7 +493,7 @@ export default function MergedOcOrdersTable() {
 
   useEffect(() => {
     setPageIndex(0);
-  }, [callStatusFilter, orderStatusFilter, nameSearch]);
+  }, [callStatusFilter, orderStatusFilter, nameSearch, typeFilter, quick]);
 
   // ----- filter option lists -----
   const now = new Date();
@@ -564,8 +585,55 @@ export default function MergedOcOrdersTable() {
         </Badge>
       </div>
 
+      {/* SEARCH + QUICK VIEWS */}
+      <div className="flex flex-wrap items-center gap-3 mb-3">
+        <input
+          value={nameSearch}
+          onChange={(e) => setNameSearch(e.target.value)}
+          placeholder="Search name, email, phone or ID..."
+          aria-label="Search"
+          className="w-full sm:w-[340px] bg-white/40 rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
+        />
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Quick views">
+          {[
+            ["ALL", "All"],
+            ["today", "Today's appointments"],
+            ["upcoming", "Upcoming"],
+            ["missed", "Missed call"],
+          ].map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={quick === v}
+              onClick={() => setQuick(v)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                quick === v
+                  ? "border-[#CE8936] bg-[#CE8936] text-white"
+                  : "border-gray-300 bg-white/40 text-gray-700 hover:bg-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* FILTERS */}
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3 pb-4">
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Column Type</label>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[150px] bg-white/40">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All</SelectItem>
+              <SelectItem value="appointment">Appointment</SelectItem>
+              <SelectItem value="order">Order</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div>
           <label className="block text-xs text-gray-600 mb-1">Year</label>
           <Select value={year} onValueChange={setYear}>
@@ -665,21 +733,13 @@ export default function MergedOcOrdersTable() {
               setCallStatusFilter("ALL");
               setOrderStatusFilter("ALL");
               setNameSearch("");
+              setTypeFilter("ALL");
+              setQuick("ALL");
             }}
           >
-            Clear
+            Clear filters
           </Button>
         </div>
-      </div>
-
-      {/* SEARCH */}
-      <div className="flex items-center py-4 w-full max-w-sm">
-        <input
-          value={nameSearch}
-          onChange={(e) => setNameSearch(e.target.value)}
-          placeholder="Search by patient name..."
-          className="w-[260px] bg-white/40 rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
-        />
       </div>
 
       {/* TABLE */}
@@ -718,7 +778,7 @@ export default function MergedOcOrdersTable() {
                       onClick={() => toggleExpanded(r.key)}
                     >
                       <TableCell
-                        className={`whitespace-normal max-w-[140px] ${
+                        className={`whitespace-normal max-w-[200px] ${
                           isOpen ? "shadow-[inset_4px_0_0_#CE8936]" : ""
                         }`}
                       >
@@ -733,6 +793,9 @@ export default function MergedOcOrdersTable() {
                         ) : (
                           <span className="font-medium">{r.fullName}</span>
                         )}
+                        {r.email && r.email !== "N/A" ? (
+                          <span className="block truncate text-xs text-muted-foreground">{r.email}</span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {r.phoneNumber}
