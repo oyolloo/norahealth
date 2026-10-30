@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +19,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { saveFutureApptAction } from "@/actions/futureAppt.action";
 import { londonParts } from "@/lib/smsCore";
-import { PRESET_DAYS, TIME_WINDOWS, addDays, dayOf, futureApptState } from "@/lib/futureAppt";
+import { PRESET_DAYS, TIME_WINDOWS, addDays, dayOf, daysBetween, futureApptState } from "@/lib/futureAppt";
 
 function longDate(day) {
   return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", {
@@ -26,6 +28,82 @@ function longDate(day) {
     year: "numeric",
     timeZone: "UTC",
   });
+}
+
+// "15 Apr 2027, Thursday"
+function dateWithDay(day) {
+  const d = new Date(`${day}T00:00:00Z`);
+  return `${longDate(day)}, ${d.toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" })}`;
+}
+
+// Calendar works in local Date objects; the app keeps "YYYY-MM-DD".
+const toLocalDate = (day) => {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+const fromLocalDate = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+const MAX_DAYS = 730;
+
+// Custom: days from today and the date, kept in step both ways.
+function CustomDayPicker({ today, day, onChange }) {
+  const [open, setOpen] = React.useState(false);
+  const [daysText, setDaysText] = React.useState(String(daysBetween(today, day)));
+  React.useEffect(() => {
+    setDaysText(String(daysBetween(today, day)));
+  }, [day, today]);
+
+  return (
+    <div className='grid grid-cols-2 gap-2'>
+      <div className='space-y-1'>
+        <Label htmlFor='fa-days' className='text-xs text-muted-foreground'>
+          Days from today
+        </Label>
+        <Input
+          id='fa-days'
+          type='number'
+          inputMode='numeric'
+          min={1}
+          max={MAX_DAYS}
+          value={daysText}
+          onChange={(e) => {
+            setDaysText(e.target.value);
+            const n = Number(e.target.value);
+            if (Number.isInteger(n) && n >= 1 && n <= MAX_DAYS) onChange(addDays(today, n));
+          }}
+          onBlur={() => setDaysText(String(daysBetween(today, day)))}
+        />
+      </div>
+      <div className='space-y-1'>
+        <Label className='text-xs text-muted-foreground'>Date</Label>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button type='button' variant='outline' className='w-full justify-between font-normal'>
+              {longDate(day)}
+              <CalendarDays className='size-4 text-[#CE8936]' />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className='w-auto overflow-hidden p-0' align='end'>
+            <Calendar
+              mode='single'
+              selected={toLocalDate(day)}
+              defaultMonth={toLocalDate(day)}
+              captionLayout='dropdown'
+              startMonth={toLocalDate(today)}
+              endMonth={toLocalDate(addDays(today, MAX_DAYS))}
+              disabled={{ before: toLocalDate(addDays(today, 1)), after: toLocalDate(addDays(today, MAX_DAYS)) }}
+              onSelect={(d) => {
+                if (!d) return;
+                onChange(fromLocalDate(d));
+                setOpen(false);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  );
 }
 
 function DaysBadge({ days }) {
@@ -43,7 +121,7 @@ function FutureApptDialog({ order, open, onOpenChange }) {
   const [mode, setMode] = React.useState(() =>
     order.futureApptDays && PRESET_DAYS.includes(order.futureApptDays) ? String(order.futureApptDays) : savedDay ? "custom" : "84",
   );
-  const [customDay, setCustomDay] = React.useState(savedDay || addDays(today, 1));
+  const [customDay, setCustomDay] = React.useState(savedDay && savedDay > today ? savedDay : addDays(today, 1));
   const [time, setTime] = React.useState(order.futureApptTime || "");
   const day = mode === "custom" ? customDay : addDays(today, Number(mode));
 
@@ -82,15 +160,8 @@ function FutureApptDialog({ order, open, onOpenChange }) {
                 </Button>
               ))}
             </div>
-            {mode === "custom" ? (
-              <Input
-                type='date'
-                min={addDays(today, 1)}
-                value={customDay}
-                onChange={(e) => setCustomDay(e.target.value)}
-              />
-            ) : null}
-            <p className='text-sm text-muted-foreground'>{day ? longDate(day) : "Pick a date"}</p>
+            {mode === "custom" ? <CustomDayPicker today={today} day={customDay} onChange={setCustomDay} /> : null}
+            <p className='text-sm text-muted-foreground'>{day ? dateWithDay(day) : "Pick a date"}</p>
           </div>
           <div className='space-y-2'>
             <Label>Time</Label>
