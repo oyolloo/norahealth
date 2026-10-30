@@ -57,7 +57,7 @@ const AutomationsPage = async () => {
         <Card title="Send missed-call text" subtitle="After an unanswered call, find the patient and send the missed-call message.">
           <MissedCallForm enabled={Boolean(missed?.enabled) && res.enabled} ready={res.ready} />
         </Card>
-        <Card title="Send a test" subtitle="Sends one message to your own phone with sample details.">
+        <Card title="Send custom message" subtitle="Type your own text, or pick a saved SMS to test with sample details, and send it to one mobile.">
           <TestSmsForm automations={res.automations} ready={res.ready} />
         </Card>
       </div>

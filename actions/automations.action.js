@@ -119,10 +119,29 @@ export async function sendTestAction(_prev, formData) {
   if (!(await tablesReady())) return NOT_READY;
   const s = await getSmsSettings();
   if (!s.apiKey) return { success: false, msg: "Save the Recallo24 API key first." };
-  const a = s.automations.find((x) => x.id === String(formData.get("id") || ""));
-  if (!a) return { success: false, msg: "Pick an SMS to test." };
   const phone = String(formData.get("phone") || "");
   if (!toE164Uk(phone)) return { success: false, msg: "Enter a UK mobile number, for example 07700 900123." };
+  // Custom: the admin's own text to any UK mobile. Do-not-text list still applies (sendOne).
+  if (String(formData.get("id") || "") === "custom") {
+    const body = String(formData.get("text") || "").trim();
+    if (!body) return { success: false, msg: "Type the message first." };
+    if (segmentsOf(body) > MAX_SEGMENTS)
+      return { success: false, msg: `Message is too long (max ${MAX_SEGMENTS} SMS parts).` };
+    const c = await sendOne(s, {
+      key: `custom:${randomUUID()}`,
+      automation: "custom",
+      phone,
+      text: body,
+      vars: {},
+      sentBy: admin.admin?.email || "admin",
+    });
+    revalidatePath(PATH);
+    return c.status === "sent"
+      ? { success: true, msg: "Message sent." }
+      : { success: false, msg: `Not sent: ${c.error || c.status}` };
+  }
+  const a = s.automations.find((x) => x.id === String(formData.get("id") || ""));
+  if (!a) return { success: false, msg: "Pick an SMS to test." };
   const r = await sendOne(s, {
     key: `test:${a.id}:${randomUUID()}`,
     automation: `test-${a.id}`,
