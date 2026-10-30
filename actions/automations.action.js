@@ -119,41 +119,53 @@ export async function sendTestAction(_prev, formData) {
   if (!(await tablesReady())) return NOT_READY;
   const s = await getSmsSettings();
   if (!s.apiKey) return { success: false, msg: "Save the Recallo24 API key first." };
-  const phone = String(formData.get("phone") || "");
-  if (!toE164Uk(phone)) return { success: false, msg: "Enter a UK mobile number, for example 07700 900123." };
+  // One or more numbers (the form sends them comma separated).
+  const phones = [...new Set(String(formData.get("phone") || "").split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean))];
+
+  if (!phones.length || phones.some((x) => !toE164Uk(x)))
+    return { success: false, msg: "Enter UK mobile numbers, for example 07700 900123." };
+  if (phones.length > 20) return { success: false, msg: "Up to 20 numbers at a time." };
   // Custom: the admin's own text to any UK mobile. Do-not-text list still applies (sendOne).
   if (String(formData.get("id") || "") === "custom") {
     const body = String(formData.get("text") || "").trim();
     if (!body) return { success: false, msg: "Type the message first." };
     if (segmentsOf(body) > MAX_SEGMENTS)
       return { success: false, msg: `Message is too long (max ${MAX_SEGMENTS} SMS parts).` };
-    const c = await sendOne(s, {
-      key: `custom:${randomUUID()}`,
-      automation: "custom",
-      phone,
-      text: body,
-      vars: {},
-      sentBy: admin.admin?.email || "admin",
-    });
+    const failed = [];
+    for (const to of phones) {
+      const c = await sendOne(s, {
+        key: `custom:${randomUUID()}`,
+        automation: "custom",
+        phone: to,
+        text: body,
+        vars: {},
+        sentBy: admin.admin?.email || "admin",
+      });
+      if (c.status !== "sent") failed.push(`${to} (${c.error || c.status})`);
+    }
     revalidatePath(PATH);
-    return c.status === "sent"
-      ? { success: true, msg: "Message sent." }
-      : { success: false, msg: `Not sent: ${c.error || c.status}` };
+    const ok = phones.length - failed.length;
+    if (!failed.length) return { success: true, msg: ok === 1 ? "Message sent." : `Sent to ${ok} numbers.` };
+    return { success: false, msg: `Sent ${ok} of ${phones.length}. Not sent: ${failed.join(", ")}` };
   }
   const a = s.automations.find((x) => x.id === String(formData.get("id") || ""));
   if (!a) return { success: false, msg: "Pick an SMS to test." };
-  const r = await sendOne(s, {
-    key: `test:${a.id}:${randomUUID()}`,
-    automation: `test-${a.id}`,
-    phone,
-    text: a.text,
-    vars: { first_name: "Test", time_frame: "3pm and 4pm", appt_time: "3pm-4pm" },
-    sentBy: admin.admin?.email || "admin",
-  });
+  const bad = [];
+  for (const to of phones) {
+    const r = await sendOne(s, {
+      key: `test:${a.id}:${randomUUID()}`,
+      automation: `test-${a.id}`,
+      phone: to,
+      text: a.text,
+      vars: { first_name: "Test", time_frame: "3pm and 4pm", appt_time: "3pm-4pm" },
+      sentBy: admin.admin?.email || "admin",
+    });
+    if (r.status !== "sent") bad.push(`${to} (${r.error || r.status})`);
+  }
   revalidatePath(PATH);
-  return r.status === "sent"
-    ? { success: true, msg: "Test SMS sent." }
-    : { success: false, msg: `Not sent: ${r.error || r.status}` };
+  return !bad.length
+    ? { success: true, msg: phones.length === 1 ? "Test SMS sent." : `Test sent to ${phones.length} numbers.` }
+    : { success: false, msg: `Sent ${phones.length - bad.length} of ${phones.length}. Not sent: ${bad.join(", ")}` };
 }
 
 export async function searchPatientsAction(query) {
