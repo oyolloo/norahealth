@@ -1,5 +1,6 @@
 "use client";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertDialog,
@@ -58,7 +59,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 
-import { LoaderIcon, MoreHorizontal, PanelLeft } from "lucide-react";
+import { ChevronDown, LoaderIcon, MoreHorizontal, PanelLeft } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 import {
@@ -447,55 +448,79 @@ export default function AppointmentOrderTable() {
 
       {/* FILTERS */}
       <div className='flex items-center gap-3 '>
+        {/* Date: Year / Month / Day grouped in one dropdown to save space */}
         <div>
-          <label className='block text-xs text-gray-600 mb-1'>Year</label>
-          <Select value={year} onValueChange={setYear}>
-            <SelectTrigger className='w-[120px] bg-white/40'>
-              <SelectValue placeholder='Year' />
-            </SelectTrigger>
-            <SelectContent>
-              {yearOptions.map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <label className="block text-xs text-gray-600 mb-1">Date</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="flex h-9 w-[170px] items-center justify-between rounded-md border bg-white/40 px-3 text-sm">
+                <span className={(!year || year === "all") || (!month || month === "all") || (!day || day === "all") ? "text-muted-foreground" : ""}>
+                  {(!year || year === "all") || (!month || month === "all") || (!day || day === "all") ? "Any date" : [day, months.find((m) => String(m.id) === String(month))?.label, year].filter((v) => v && v !== "all").join(" ")}
+                </span>
+                <ChevronDown className="size-4 opacity-50" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-auto p-3">
+              <div className="flex items-end gap-2">
+              <div>
+                <label className='block text-xs text-gray-600 mb-1'>Year</label>
+                <Select value={year} onValueChange={setYear}>
+                  <SelectTrigger className='w-[120px] bg-white/40'>
+                    <SelectValue placeholder='Year' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((y) => (
+                      <SelectItem key={y} value={String(y)}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className='block text-xs text-gray-600 mb-1'>Month</label>
+                <Select value={month} onValueChange={setMonth}>
+                  <SelectTrigger className='w-[120px] bg-white/40'>
+                    <SelectValue placeholder='Month' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((m) => (
+                      <SelectItem key={m.id} value={String(m.id)}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className='block text-xs text-gray-600 mb-1'>Day</label>
+                <Select value={day} onValueChange={setDay}>
+                  <SelectTrigger className='w-[80px] bg-white/40'>
+                    <SelectValue placeholder='Day' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {days.map((d) => (
+                      <SelectItem key={d} value={String(d)}>
+                        {d}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* ✅ NEW: BookingStatus filter */}
+              </div>
+              {year || month || day ? (
+                <button type="button" onClick={() => { setYear(""); setMonth(""); setDay(""); }} className="mt-2 text-xs text-[#8A5A12] hover:underline">
+                  Clear date
+                </button>
+              ) : null}
+            </PopoverContent>
+          </Popover>
         </div>
 
-        <div>
-          <label className='block text-xs text-gray-600 mb-1'>Month</label>
-          <Select value={month} onValueChange={setMonth}>
-            <SelectTrigger className='w-[120px] bg-white/40'>
-              <SelectValue placeholder='Month' />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((m) => (
-                <SelectItem key={m.id} value={String(m.id)}>
-                  {m.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className='block text-xs text-gray-600 mb-1'>Day</label>
-          <Select value={day} onValueChange={setDay}>
-            <SelectTrigger className='w-[80px] bg-white/40'>
-              <SelectValue placeholder='Day' />
-            </SelectTrigger>
-            <SelectContent>
-              {days.map((d) => (
-                <SelectItem key={d} value={String(d)}>
-                  {d}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* ✅ NEW: BookingStatus filter */}
         <div>
           <label className='block text-xs text-gray-600 mb-1'>Status</label>
           <Select
