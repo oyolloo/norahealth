@@ -31,14 +31,16 @@ const NAV_ITEMS = [
     Icon: Shield,
     isActive: (p) => p === "/admin/profile",
   },
-  {
-    href: "/admin/appointments",
-    label: "Appointments",
-    Icon: ClipboardClock,
-    isActive: (p) =>
-      p.startsWith("/admin/appointments") &&
-      !p.startsWith("/admin/appointments-order"),
-  },
+  // Appointments menu hidden: its data now lives in OC Orders. The page
+  // (/admin/appointments) stays until the client OKs removing it.
+  // {
+  //   href: "/admin/appointments",
+  //   label: "Appointments",
+  //   Icon: ClipboardClock,
+  //   isActive: (p) =>
+  //     p.startsWith("/admin/appointments") &&
+  //     !p.startsWith("/admin/appointments-order"),
+  // },
   {
     href: "/admin/oc-orders",
     label: "OC Orders",
