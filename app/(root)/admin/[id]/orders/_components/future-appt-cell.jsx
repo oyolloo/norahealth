@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { CalendarDays, Plus } from "lucide-react";
+import { CalendarDays, Plus, TriangleAlert } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,16 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { saveFutureApptAction } from "@/actions/futureAppt.action";
 import { londonParts } from "@/lib/smsCore";
-import { PRESET_DAYS, TIME_WINDOWS, addDays, dayOf, daysBetween, futureApptState } from "@/lib/futureAppt";
+import {
+  OFF_WEEKDAYS,
+  PRESET_DAYS,
+  TIME_WINDOWS,
+  addDays,
+  dayOf,
+  daysBetween,
+  futureApptState,
+  offDayWarning,
+} from "@/lib/futureAppt";
 
 function longDate(day) {
   return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", {
@@ -92,7 +101,10 @@ function CustomDayPicker({ today, day, onChange }) {
               captionLayout='dropdown'
               startMonth={toLocalDate(today)}
               endMonth={toLocalDate(addDays(today, MAX_DAYS))}
-              disabled={{ before: toLocalDate(addDays(today, 1)), after: toLocalDate(addDays(today, MAX_DAYS)) }}
+              disabled={[
+                { before: toLocalDate(addDays(today, 1)), after: toLocalDate(addDays(today, MAX_DAYS)) },
+                { dayOfWeek: OFF_WEEKDAYS },
+              ]}
               onSelect={(d) => {
                 if (!d) return;
                 onChange(fromLocalDate(d));
@@ -124,6 +136,10 @@ function FutureApptDialog({ order, open, onOpenChange }) {
   const [customDay, setCustomDay] = React.useState(savedDay && savedDay > today ? savedDay : addDays(today, 1));
   const [time, setTime] = React.useState(order.futureApptTime || "");
   const day = mode === "custom" ? customDay : addDays(today, Number(mode));
+  const warning = offDayWarning(day, time);
+  // Saving on an off day needs a deliberate yes, asked again for each new day/time.
+  const [okOffDay, setOkOffDay] = React.useState(false);
+  React.useEffect(() => setOkOffDay(false), [day, time]);
 
   const [state, action, saving] = React.useActionState(saveFutureApptAction, { success: null, msg: "" });
   React.useEffect(() => {
@@ -178,6 +194,23 @@ function FutureApptDialog({ order, open, onOpenChange }) {
               </SelectContent>
             </Select>
           </div>
+          {warning ? (
+            <div role='alert' className='rounded-md border border-[#EBD3B4] bg-[#FBF0E2] p-3 text-sm text-[#8A5A12]'>
+              <p className='flex items-start gap-2'>
+                <TriangleAlert className='mt-0.5 size-4 shrink-0' />
+                <span>{warning} Book it anyway?</span>
+              </p>
+              <label className='mt-2 flex items-center gap-2 font-medium'>
+                <input
+                  type='checkbox'
+                  checked={okOffDay}
+                  onChange={(e) => setOkOffDay(e.target.checked)}
+                  className='size-4 accent-[#CE8936]'
+                />
+                Yes, keep this day
+              </label>
+            </div>
+          ) : null}
           <DialogFooter className='gap-2 sm:justify-between'>
             {savedDay ? (
               <Button type='submit' name='clear' value='1' variant='outline' disabled={saving}>
@@ -186,7 +219,7 @@ function FutureApptDialog({ order, open, onOpenChange }) {
             ) : (
               <span />
             )}
-            <Button type='submit' disabled={saving || !day || !time}>
+            <Button type='submit' name='save' value='1' disabled={saving || !day || !time || (warning && !okOffDay)}>
               {saving ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
