@@ -41,7 +41,7 @@ import {
   sendMissedCallAction,
   sendTestAction,
 } from "@/actions/automations.action";
-import { MAX_SEGMENTS, renderText, segmentsOf } from "@/lib/smsCore";
+import { CREDITS_PER_SEGMENT, MAX_SEGMENTS, renderText, segmentsOf, smsLimit, toE164Uk } from "@/lib/smsCore";
 
 const initial = { success: null, msg: "" };
 const SAMPLE = { first_name: "Emma", time_frame: "3pm and 4pm", appt_time: "3pm-4pm" };
@@ -380,7 +380,7 @@ function MessageRow({ a, ready, smsOn }) {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-[#6B6660] min-w-0">
-          {a.ready ? a.conditions : a.waiting} · {savedParts} SMS credit{savedParts === 1 ? "" : "s"} each
+          {a.ready ? a.conditions : a.waiting} · {savedParts} SMS part{savedParts === 1 ? "" : "s"} ({savedParts * CREDITS_PER_SEGMENT} credits) each
           {on && !smsOn ? " · waiting for the main switch" : ""}
         </p>
         <Button
@@ -415,7 +415,7 @@ function MessageRow({ a, ready, smsOn }) {
                 className="w-full resize-y rounded-md border border-input bg-white px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               />
               <p className="text-xs text-[#6B6660]">
-                {text.length} characters, {parts} SMS credit{parts === 1 ? "" : "s"} per patient. You can use{" "}
+                {text.length} characters, {parts} SMS part{parts === 1 ? "" : "s"} ({parts * CREDITS_PER_SEGMENT} credits) per patient. You can use{" "}
                 {"{first_name}"}
                 {a.id === "2" || a.id === "4a" ? ", {time_frame}" : ""}
                 {a.id === "3" ? ", {appt_time}" : ""}.
@@ -582,15 +582,87 @@ export function MissedCallForm({ enabled, ready }) {
   );
 }
 
+// Type a number and press Enter (or comma) to add it as a chip.
+function PhoneChips({ phones, setPhones }) {
+  const [draft, setDraft] = useState("");
+  const [err, setErr] = useState("");
+  function add(raw) {
+    const parts = String(raw).split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean);
+    if (!parts.length) return;
+    const bad = parts.filter((x) => !toE164Uk(x));
+    if (bad.length) return setErr(`Not a UK mobile: ${bad.join(", ")}`);
+    setPhones((cur) => {
+      const seen = new Set(cur.map(toE164Uk));
+      const next = [...cur];
+      for (const x of parts) {
+        if (!seen.has(toE164Uk(x))) {
+          seen.add(toE164Uk(x));
+          next.push(x);
+        }
+      }
+      return next.slice(0, 20);
+    });
+    setDraft("");
+    setErr("");
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-input bg-white px-2 py-1.5 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+        {phones.map((p) => (
+          <span key={p} className="inline-flex items-center gap-1 rounded-full bg-[#FBF0E2] px-2.5 py-0.5 text-xs font-medium text-[#8A5A12]">
+            {p}
+            <button
+              type="button"
+              aria-label={`Remove ${p}`}
+              onClick={() => setPhones((cur) => cur.filter((x) => x !== p))}
+              className="text-[#8A5A12]/70 hover:text-[#8A5A12]"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              add(draft);
+            } else if (e.key === "Backspace" && !draft && phones.length) {
+              setPhones((cur) => cur.slice(0, -1));
+            }
+          }}
+          onBlur={() => draft.trim() && add(draft)}
+          onPaste={(e) => {
+            e.preventDefault();
+            add(e.clipboardData.getData("text"));
+          }}
+          placeholder={phones.length ? "Add another number" : "Mobile number, then Enter, e.g. 07700 900123"}
+          aria-label="Mobile numbers"
+          className="min-w-[180px] flex-1 bg-transparent py-0.5 text-sm outline-none"
+        />
+      </div>
+      <p className={`text-xs ${err ? "text-[#9B2C22]" : "text-[#6B6660]"}`}>
+        {err || `Press Enter after each number. ${phones.length}/20 added.`}
+      </p>
+    </div>
+  );
+}
+
 export function TestSmsForm({ automations, ready }) {
   const [id, setId] = useState("custom");
   const [text, setText] = useState("");
+  const [phones, setPhones] = useState([]);
   const [state, action, sending] = useActionState(useOnce(sendTestAction), initial);
   useToastResult(state);
   const custom = id === "custom";
   const parts = segmentsOf(text);
+  const limit = smsLimit(text);
   useEffect(() => {
-    if (state?.success && custom) setText("");
+    if (state?.success) {
+      if (custom) setText("");
+      setPhones([]);
+    }
   }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -614,25 +686,37 @@ export function TestSmsForm({ automations, ready }) {
             <textarea
               name="text"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                // Hard stop at the SMS limit (6 parts): extra typing or paste is cut off.
+                let v = e.target.value;
+                while (v && smsLimit(v).used > smsLimit(v).max) v = v.slice(0, -1);
+                setText(v);
+              }}
               rows={4}
               placeholder="Type your message"
               aria-label="Message"
               className="w-full rounded-md border border-input bg-white px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
-            <p className={`text-xs ${parts > MAX_SEGMENTS ? "text-[#9B2C22]" : "text-[#6B6660]"}`}>
-              {text.length} characters · {parts} SMS {parts === 1 ? "credit" : "credits"}
-              {parts > MAX_SEGMENTS ? ` (max ${MAX_SEGMENTS})` : ""}
+            <p className={`flex justify-between gap-2 text-xs ${limit.used >= limit.max ? "text-[#9B2C22]" : "text-[#6B6660]"}`}>
+              <span>
+                {parts} SMS part{parts === 1 ? "" : "s"} = {parts * CREDITS_PER_SEGMENT} credits per number
+                {phones.length > 1 ? ` · ${parts * CREDITS_PER_SEGMENT * phones.length} credits total` : ""}
+                {!limit.gsm && text ? " · special characters shorten the limit" : ""}
+              </span>
+              <span className="shrink-0">
+                {limit.used} / {limit.max}
+              </span>
             </p>
           </div>
         ) : null}
-        <Input name="phone" placeholder="Mobile number, e.g. 07700 900123" aria-label="Mobile number" className="bg-white" />
+        <input type="hidden" name="phone" value={phones.join(",")} />
+        <PhoneChips phones={phones} setPhones={setPhones} />
       </div>
       <div>
         <Button
           type="submit"
           variant="outline"
-          disabled={sending || !ready || (custom && (!text.trim() || parts > MAX_SEGMENTS))}
+          disabled={sending || !ready || !phones.length || (custom && (!text.trim() || parts > MAX_SEGMENTS))}
         >
           <Send /> {sending ? "Sending..." : custom ? "Send message" : "Send test"}
         </Button>
