@@ -1,5 +1,6 @@
 "use client";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import React, { useMemo, useState } from "react";
 import {
   flexRender,
@@ -41,7 +42,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 
-import { MoreHorizontal, PanelLeft } from "lucide-react";
+import { ChevronDown, MoreHorizontal, PanelLeft } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useAdmin } from "@/lib/adminContext";
 import Link from "next/link";
@@ -323,73 +324,91 @@ export default function AllOrdersTable({
 
       {/* FILTERS (onChange updates URL immediately) */}
       <div className='flex flex-wrap items-end gap-3'>
+        {/* Date: Year / Month / Day grouped in one dropdown to save space */}
         <div>
-          <label className='block text-xs text-gray-600 mb-1'>Year</label>
-          <Select
-            value={year}
-            onValueChange={(v) => {
-              setYear(v);
-              pushWithParams({ year: v, page: 0 });
-            }}
-          >
-            <SelectTrigger className='w-[120px] bg-white/40'>
-              <SelectValue placeholder='Year' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All</SelectItem>
-              {yearOptions.map((y) => (
-                <SelectItem key={y} value={y}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <label className="block text-xs text-gray-600 mb-1">Date</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="flex h-9 w-[170px] items-center justify-between rounded-md border bg-white/40 px-3 text-sm">
+                <span className={(!year || year === "all") || (!month || month === "all") || (!day || day === "all") ? "text-muted-foreground" : ""}>
+                  {(!year || year === "all") || (!month || month === "all") || (!day || day === "all") ? "Any date" : [day, months.find((m) => String(m.id) === String(month))?.label, year].filter((v) => v && v !== "all").join(" ")}
+                </span>
+                <ChevronDown className="size-4 opacity-50" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-auto p-3">
+              <div className="flex items-end gap-2">
+              <div>
+                <label className='block text-xs text-gray-600 mb-1'>Year</label>
+                <Select
+                  value={year}
+                  onValueChange={(v) => {
+                    setYear(v);
+                    pushWithParams({ year: v, page: 0 });
+                  }}
+                >
+                  <SelectTrigger className='w-[120px] bg-white/40'>
+                    <SelectValue placeholder='Year' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='all'>All</SelectItem>
+                    {yearOptions.map((y) => (
+                      <SelectItem key={y} value={y}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div>
-          <label className='block text-xs text-gray-600 mb-1'>Month</label>
-          <Select
-            value={month}
-            onValueChange={(v) => {
-              setMonth(v);
-              pushWithParams({ month: v, page: 0 });
-            }}
-          >
-            <SelectTrigger className='w-[120px] bg-white/40'>
-              <SelectValue placeholder='Month' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All</SelectItem>
-              {months.map((m) => (
-                <SelectItem key={m.id} value={String(m.id)}>
-                  {m.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+              <div>
+                <label className='block text-xs text-gray-600 mb-1'>Month</label>
+                <Select
+                  value={month}
+                  onValueChange={(v) => {
+                    setMonth(v);
+                    pushWithParams({ month: v, page: 0 });
+                  }}
+                >
+                  <SelectTrigger className='w-[120px] bg-white/40'>
+                    <SelectValue placeholder='Month' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='all'>All</SelectItem>
+                    {months.map((m) => (
+                      <SelectItem key={m.id} value={String(m.id)}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div>
-          <label className='block text-xs text-gray-600 mb-1'>Day</label>
-          <Select
-            value={day}
-            onValueChange={(v) => {
-              setDay(v);
-              pushWithParams({ day: v, page: 0 });
-            }}
-          >
-            <SelectTrigger className='w-[80px] bg-white/40'>
-              <SelectValue placeholder='Day' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All</SelectItem>
-              {days.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {d}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <div>
+                <label className='block text-xs text-gray-600 mb-1'>Day</label>
+                <Select
+                  value={day}
+                  onValueChange={(v) => {
+                    setDay(v);
+                    pushWithParams({ day: v, page: 0 });
+                  }}
+                >
+                  <SelectTrigger className='w-[80px] bg-white/40'>
+                    <SelectValue placeholder='Day' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='all'>All</SelectItem>
+                    {days.map((d) => (
+                      <SelectItem key={d} value={d}>
+                        {d}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div>
