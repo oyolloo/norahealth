@@ -583,18 +583,25 @@ export function MissedCallForm({ enabled, ready }) {
 }
 
 export function TestSmsForm({ automations, ready }) {
-  const [id, setId] = useState(automations[0]?.id);
+  const [id, setId] = useState("custom");
+  const [text, setText] = useState("");
   const [state, action, sending] = useActionState(useOnce(sendTestAction), initial);
   useToastResult(state);
+  const custom = id === "custom";
+  const parts = segmentsOf(text);
+  useEffect(() => {
+    if (state?.success && custom) setText("");
+  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="id" value={id} />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="flex flex-col gap-3">
         <Select value={id} onValueChange={setId}>
-          <SelectTrigger className="w-full bg-white" aria-label="Message to test">
+          <SelectTrigger className="w-full bg-white" aria-label="Message to send">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="custom">Custom</SelectItem>
             {automations.map((a) => (
               <SelectItem key={a.id} value={a.id}>
                 {a.title}
@@ -602,11 +609,32 @@ export function TestSmsForm({ automations, ready }) {
             ))}
           </SelectContent>
         </Select>
-        <Input name="phone" placeholder="Your mobile, e.g. 07700 900123" aria-label="Your mobile" className="bg-white" />
+        {custom ? (
+          <div className="flex flex-col gap-1">
+            <textarea
+              name="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={4}
+              placeholder="Type your message"
+              aria-label="Message"
+              className="w-full rounded-md border border-input bg-white px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            />
+            <p className={`text-xs ${parts > MAX_SEGMENTS ? "text-[#9B2C22]" : "text-[#6B6660]"}`}>
+              {text.length} characters · {parts} SMS {parts === 1 ? "credit" : "credits"}
+              {parts > MAX_SEGMENTS ? ` (max ${MAX_SEGMENTS})` : ""}
+            </p>
+          </div>
+        ) : null}
+        <Input name="phone" placeholder="Mobile number, e.g. 07700 900123" aria-label="Mobile number" className="bg-white" />
       </div>
       <div>
-        <Button type="submit" variant="outline" disabled={sending || !ready}>
-          <Send /> {sending ? "Sending..." : "Send test"}
+        <Button
+          type="submit"
+          variant="outline"
+          disabled={sending || !ready || (custom && (!text.trim() || parts > MAX_SEGMENTS))}
+        >
+          <Send /> {sending ? "Sending..." : custom ? "Send message" : "Send test"}
         </Button>
       </div>
     </form>
