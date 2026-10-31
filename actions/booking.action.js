@@ -223,6 +223,7 @@ export async function createBooking(formData) {
     appointment: appointmentStart,
     appointmentEnd: appointmentEnd,
     notes,
+    phoneNumber,
   });
 } catch (emailError) {
   console.error("Booking confirmation email failed:", emailError);
