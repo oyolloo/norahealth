@@ -103,6 +103,7 @@ export default function BookingsMobile() {
   }
 
   const selectedIsBookable = isBookable(selectedDate);
+  const canConfirm = Boolean(selectedIsBookable && selectedSlot);
 
   useEffect(() => {
     (async () => {
@@ -369,6 +370,25 @@ export default function BookingsMobile() {
         </div>
       </div>
 
+      {/* Confirm: grey until a date and time are picked (client review 3.3) */}
+      <button
+        type="button"
+        onClick={confirm}
+        disabled={!canConfirm}
+        aria-disabled={!canConfirm}
+        className={[
+          "group w-full text-base font-medium py-3 px-[18px] rounded-full transition duration-300",
+          canConfirm
+            ? "bg-[#D6866B] text-white hover:bg-[#c5755a] cursor-pointer"
+            : "bg-[#D9D9D9] text-[#6B6660] cursor-not-allowed",
+        ].join(" ")}
+      >
+        <span className="flex items-center justify-center gap-1.5">
+          Confirm Appointment
+          <ArrowUpRight className={["size-5 transition duration-300", canConfirm ? "group-hover:rotate-45" : ""].join(" ")} />
+        </span>
+      </button>
+
       {/* Notes */}
       <div className="flex flex-col gap-[11px]">
         <label className="text-sm font-medium text-[#0D060C] tracking-[-0.2px]">
@@ -384,19 +404,8 @@ export default function BookingsMobile() {
         />
       </div>
 
-      {/* Confirm + image */}
+      {/* Image */}
       <div className="flex flex-col gap-5">
-        <button
-          type="button"
-          onClick={confirm}
-          className="group w-full bg-[#D6866B] text-white text-base font-medium py-3 px-[18px] rounded-full hover:bg-[#c5755a] transition duration-300 cursor-pointer"
-        >
-          <span className="flex items-center justify-center gap-1.5">
-            Confirm Appointment
-            <ArrowUpRight className="size-5 group-hover:rotate-45 transition duration-300" />
-          </span>
-        </button>
-
         <div className="h-[200px] rounded-[16px] overflow-hidden">
           <Image
             src="/images/booking.png"
