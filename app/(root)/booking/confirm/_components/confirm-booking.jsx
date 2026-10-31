@@ -139,11 +139,13 @@ const ConfirmBooking = ({ userDetails }) => {
             >
               <X className="size-5" strokeWidth={1.8} />
             </button>
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-green-100">
+            {/* Redesigned per client review (25 Oct, item 5), same look as the
+                confirmation email: tick, title, details card, "When we call". */}
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-[#FBF0E2]">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#16a34a"
+                stroke="#D6866B"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -152,17 +154,36 @@ const ConfirmBooking = ({ userDetails }) => {
                 <path d="M20 6 9 17l-5-5" />
               </svg>
             </div>
-            <p className="text-[#3A3D42] mb-2">
-              <span className="font-medium">Date: </span>
-              {formatBookingDate(
-                bookingData?.bookingdate,
-                bookingData?.bookingtime,
-                bookingData?.bookingendtime
-              )}
+            <p className="mb-1 text-xs font-bold uppercase tracking-[1.5px] text-[#B5701F]">
+              Request received
             </p>
-            <h3 className="text-[#0D060C] text-lg font-medium tracking-[-0.2px]">
-              Your appointment is confirmed &amp; you have been sent an email
+            <h3 className="mb-5 text-[#0D060C] text-xl font-semibold tracking-[-0.3px]">
+              Your telephone appointment is confirmed
             </h3>
+            <div className="mb-4 rounded-[12px] bg-[#FAF9F8] px-4 py-3 text-left">
+              <p className="text-xs text-[#6B6660]">Appointment</p>
+              <p className="mb-2 text-base font-semibold text-[#3F1535]">
+                {formatBookingDate(
+                  bookingData?.bookingdate,
+                  bookingData?.bookingtime,
+                  bookingData?.bookingendtime
+                )}
+              </p>
+              {form.phoneNumber?.trim() ? (
+                <>
+                  <p className="text-xs text-[#6B6660]">Contact Number Provided</p>
+                  <p className="text-base font-semibold text-[#3F1535]">{form.phoneNumber.trim()}</p>
+                </>
+              ) : null}
+            </div>
+            <div className="mb-4 rounded-[12px] border-l-4 border-[#D6866B] bg-[#FAF9F8] px-4 py-3 text-left text-sm leading-[22px] text-[#3A3D42]">
+              <p className="mb-1 font-semibold text-[#0D060C]">When we call</p>
+              We&rsquo;ll call from 0208 679 7198. We never use a private number. Please keep your phone free for the full hour.
+            </div>
+            <p className="text-sm text-[#3A3D42]">
+              We&rsquo;ve sent the details to{" "}
+              <span className="font-medium text-[#0D060C] break-all">{form.email?.trim() || "your email"}</span>.
+            </p>
           </div>
         </div>
       )}
