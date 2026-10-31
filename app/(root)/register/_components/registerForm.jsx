@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, LoaderIcon } from "lucide-react";
 import { registerFullAction } from "@/actions/user.action";
 import DateField from "@/components/global/DateField";
+import DobInput from "@/components/global/DobInput";
 import AddressLookupInput from "@/components/global/AddressLookupInput";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -79,7 +80,7 @@ const RegisterForm = () => {
     if (idx === 0) {
       if (!form.firstname.trim()) missing.push("First name");
       if (!form.lastname.trim()) missing.push("Last name");
-      if (!form.phone.trim()) missing.push("Phone Number");
+      if (!form.phone.trim()) missing.push("Mobile Number");
       if (!dob) missing.push("Date of Birth");
     } else if (idx === 1) {
       if (!form.address.trim()) missing.push("Home Address");
@@ -223,27 +224,25 @@ const RegisterForm = () => {
               className='block text-base mb-2 text-[#0D060C]'
               htmlFor='phone'
             >
-              Phone Number
+              Mobile Number
             </label>
             <input
               type='tel'
               id='phone'
               name='phone'
-              placeholder='Phone Number'
+              placeholder='Mobile Number'
               value={form.phone}
               onChange={handleChange}
               className={inputClass}
             />
           </div>
 
-          <DateField
+          <DobInput
             id='dob'
             label='Date of Birth'
             selected={dob}
             onChange={setDob}
-            name='dob'
-            placeholder='Select date of birth'
-            bg='bg-[#F6F5F4] border-0'
+            className={inputClass}
           />
 
           <div className='md:col-span-2'>
@@ -277,7 +276,7 @@ const RegisterForm = () => {
               kind='address'
               id='address'
               name='address'
-              placeholder='Home Address'
+              placeholder='Start with the house number & street name'
               value={form.address}
               onChange={handleChange}
               onPick={({ postcode }) =>
@@ -323,7 +322,7 @@ const RegisterForm = () => {
               kind='address'
               id='deliveryAddress'
               name='deliveryAddress'
-              placeholder='Delivery Address'
+              placeholder='Start with the house number & street name'
               value={form.deliveryAddress}
               onChange={handleChange}
               onPick={({ postcode }) =>
