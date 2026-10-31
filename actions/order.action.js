@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { loggedInUserAction } from "./user.action";
 import { Resend } from "resend";
 import { orderEmailTemplate, orderStatusEmailTemplate } from "@/lib/emailTemplate";
+import { statusEmailSubject } from "@/lib/emailHtml";
 import { createRoyalMailOrder, isRoyalMailConfigured } from "@/lib/royalMail";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -112,15 +113,24 @@ export const createOrderByAdmin = async (prevState, formData) => {
 
 
 
-  // 3️⃣ Send confirmation email
+  // 3️⃣ Send the status email for the order as it now stands (client review
+  // 25 Oct: an admin-created order is approved, so it gets the "Request
+  // Approved" / Awaiting Dispatch email, or Dispatched if Royal Mail posted it,
+  // not the "We've received your request" email).
   try {
+    const saved = await prisma.order.findUnique({ where: { id: order.id } });
+    const finalOrder = saved || order;
     await resend.emails.send({
       from: "Nora Health <contact@norahealth.co.uk>",
       to: customer.email,
-      subject: "Your Order Has Been Confirmed",
-      html: orderEmailTemplate({
+      subject: statusEmailSubject(finalOrder.status, finalOrder.id),
+      replyTo: "contact@norahealth.co.uk",
+      html: orderStatusEmailTemplate({
         firstName: customer.account?.firstName,
-        phoneNumber: customer.account?.phoneNumber,
+        orderId: finalOrder.id,
+        status: finalOrder.status,
+        medicineName: finalOrder.medicineName,
+        trackingId: finalOrder.trackingId,
         deliveryAddress:
           customer.account?.deliveryAddress || customer.account?.address,
       }),
@@ -519,12 +529,8 @@ export const updateOrderStatus = async (prevState, formData) => {
   // ✅ send email (don’t block update if email fails)
   if (customer?.email) {
     const s = String(order.status || "").toLowerCase();
-    const emailSubject =
-      s === "declined"
-        ? "Contraception Request Declined"
-        : s === "posted"
-        ? "Contraception Posted"
-        : `Order #${order.id} status: ${order.status}`;
+    // Client-approved subjects (review 25 Oct): On Hold / Dispatched / Request Approved.
+    const emailSubject = statusEmailSubject(order.status, order.id);
     try {
       await resend.emails.send({
         from: "Nora Health <contact@norahealth.co.uk>",

@@ -5,6 +5,7 @@ import { FULL_ADDRESS_MSG, isFullAddress } from "@/lib/addressLookup";
 import { createCalendarEvent } from "@/lib/googleCalendar";
 import { revalidatePath } from "next/cache";
 import { orderFromBookingEmailTemplate, sendBookingConfirmationEmail, sendOrderBookingConfirmationEmail } from "@/lib/emailTemplate";
+import { statusEmailSubject } from "@/lib/emailHtml";
 import { createRoyalMailOrder, isRoyalMailConfigured } from "@/lib/royalMail";
 import { Resend } from "resend";
 import { getAdminUser } from "./admin.action";
@@ -1164,7 +1165,7 @@ export async function createOrderFromBooking({
       await resend.emails.send({
         from: "Nora Health <contact@norahealth.co.uk>",
         to: booking.email,
-        subject: "Your order has been updated",
+        subject: statusEmailSubject(finalStatus, order.id),
         replyTo: "contact@norahealth.co.uk",
         html: orderFromBookingEmailTemplate({
           fullName: booking.fullName,
