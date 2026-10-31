@@ -520,7 +520,7 @@ export async function sendBookingConfirmationEmail({
     from: "Nora Health <contact@norahealth.co.uk>",
     to,
     bcc: "pharmacy.fap80@nhs.net",
-    subject: "Your Appointment Is Confirmed",
+    subject: SUBJECTS.requestReceived, // same template + subject as /booking/order (client review 7.7)
     replyTo: "contact@norahealth.co.uk",
     html,
     attachments: [cal.attachment],
