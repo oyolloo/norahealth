@@ -4,6 +4,7 @@ import {
   calendarButtonsHtml,
   firstNameOf,
   orderReceivedEmailHtml,
+  SUBJECTS,
   longCallDate,
   orderStatusEmailHtml,
   welcomeEmailHtml,
@@ -36,7 +37,7 @@ export async function sendWelcomeEmail({ to, name }) {
     from: "Nora Health <contact@norahealth.co.uk>",
     to,
     replyTo: "contact@norahealth.co.uk",
-    subject: "Welcome to Nora Health",
+    subject: SUBJECTS.welcome,
     html,
   });
 }
@@ -578,7 +579,7 @@ export async function sendOrderBookingConfirmationEmail({
     from: "Nora Health <contact@norahealth.co.uk>",
     to,
     bcc: "pharmacy.fap80@nhs.net",
-    subject: "Your Contraceptive Order Has Been Received",
+    subject: SUBJECTS.requestReceived,
     replyTo: "contact@norahealth.co.uk",
     html,
     ...(cal ? { attachments: [cal.attachment] } : {}),
