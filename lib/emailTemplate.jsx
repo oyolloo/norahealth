@@ -4,6 +4,7 @@ import {
   calendarButtonsHtml,
   firstNameOf,
   orderReceivedEmailHtml,
+  longCallDate,
   orderStatusEmailHtml,
   welcomeEmailHtml,
 } from "./emailHtml";
@@ -67,7 +68,9 @@ function formatAppointmentRange(start, end) {
       minute: "2-digit",
       timeZone: "UTC",
     });
-  return `${day} at ${t(s)} – ${t(e)}`;
+  // "Monday 26th October 2026 at 10:00 – 11:00" (client review 7.2a, same style as the order email)
+  const long = longCallDate(s);
+  return `${long ? `${long} ${s.getUTCFullYear()}` : day} at ${t(s)} – ${t(e)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -488,6 +491,7 @@ export async function sendBookingConfirmationEmail({
   appointment,
   appointmentEnd,
   notes,
+  phoneNumber,
 }) {
   const whatsappLink = "https://wa.me/447737984422";
   const whatsappNumber = "+44 7737 984422";
@@ -505,6 +509,7 @@ export async function sendBookingConfirmationEmail({
   const html = bookingConfirmationEmailHtml({
     fullName,
     appointmentText: formatAppointmentRange(appointment, appointmentEnd),
+    phoneNumber,
     notes,
     calendarButtons: cal.buttonsHtml,
     whatsappNumber,
@@ -542,13 +547,8 @@ export async function sendOrderBookingConfirmationEmail({
   let callDate = "";
   let callTimeSlot = "";
   if (appointment) {
-    callDate = new Date(appointment)
-      .toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        timeZone: "UTC", // stored UTC wall-clock == UK time the user picked
-      })
-      .replace(" ", "-"); // "15 Jul" -> "15-Jul"
+    // "Monday 26th October" (client review 7.2a)
+    callDate = longCallDate(appointment);
     callTimeSlot = slotStartTime
       ? `${slotStartTime}${slotEndTime ? ` – ${slotEndTime}` : ""}`
       : "";
