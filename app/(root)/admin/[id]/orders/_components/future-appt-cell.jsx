@@ -30,11 +30,14 @@ import {
   offDayWarning,
 } from "@/lib/futureAppt";
 
+
+// Format: Wed 05 Jan 27
 function longDate(day) {
   return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", {
+    weekday: "short",
     day: "2-digit",
     month: "short",
-    year: "numeric",
+    year: "2-digit",
     timeZone: "UTC",
   });
 }
