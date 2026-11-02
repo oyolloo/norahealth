@@ -28,6 +28,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { useAdmin } from "@/lib/adminContext";
+import { getFutureApptsAction } from "@/actions/futureAppt.action";
 
 /**
  * Reusable confirm dialog hook (uses shadcn AlertDialog)
@@ -152,6 +153,17 @@ export default function BookingSlots() {
   const [bulkEnd, setBulkEnd] = useState(""); // "YYYY-MM-DD"
   const [bulkLoading, setBulkLoading] = useState(false);
 
+  // CC-16: Future Appts (set on orders) shown on the calendar. Read only.
+  const [futureAppts, setFutureAppts] = useState([]);
+  useEffect(() => {
+    getFutureApptsAction()
+      .then((rows) => setFutureAppts(Array.isArray(rows) ? rows : []))
+      .catch(() => setFutureAppts([]));
+  }, []);
+  const ymdLocal = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const futureApptsFor = (d) => futureAppts.filter((a) => a.day === ymdLocal(d));
+
   function isSameDay(a, b) {
     if (!a || !b) return false;
     return (
@@ -179,6 +191,7 @@ export default function BookingSlots() {
 
     //  Allow today even if not in bookableDates (optional)
     if (isSameDay(date, today)) return false;
+    if (futureApptsFor(date).length) return false; // CC-16: open days with a Future Appt
     const isBookable = bookableDates.some((d) => isSameDay(d, date));
     if (isSameDay(date, today)) return false;
     return !isBookable;
@@ -478,6 +491,14 @@ export default function BookingSlots() {
             onChange={onDateChange}
             value={value}
             tileDisabled={tileDisabled}
+            tileContent={({ date, view }) =>
+              view === "month" && futureApptsFor(date).length ? (
+                <span
+                  title={`${futureApptsFor(date).length} Future Appt`}
+                  className='mx-auto mt-0.5 block size-1.5 rounded-full bg-[#3F1535]'
+                />
+              ) : null
+            }
             className='react-calendar-custom w-full border-0'
           />
         </div>
@@ -505,6 +526,27 @@ export default function BookingSlots() {
             </button>
           )}
         </div>
+
+        {futureApptsFor(value).length > 0 && (
+          <div className='mb-4 rounded-md border border-[#DFCAB0] bg-white p-3'>
+            <div className='mb-2 text-xs font-semibold uppercase tracking-wide text-[#3F1535]'>
+              Future Appt ({futureApptsFor(value).length})
+            </div>
+            <ul className='space-y-2'>
+              {futureApptsFor(value).map((a) => (
+                <li key={a.orderId} className='text-sm leading-5'>
+                  <Link href={`/admin/${a.userId}/orders`} className='font-medium hover:underline'>
+                    {a.name}
+                  </Link>
+                  <div className='text-xs text-gray-600'>
+                    {a.medicine}
+                    {a.time ? ` · ${a.time}` : ""}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {!selectedDateIsBookable ? (
           <div className='text-left p-4 '>

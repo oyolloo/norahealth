@@ -44,3 +44,35 @@ export async function saveFutureApptAction(prevState, formData) {
   revalidatePath(`/admin/${order.userId}/account`);
   return { success: true, msg: "Future appointment saved." };
 }
+
+// CC-16: every Future Appt from today on, for the admin Booking Slots calendar.
+// Read only. Returns [{ day: "YYYY-MM-DD", time, orderId, userId, name, medicine }].
+export async function getFutureApptsAction() {
+  const admin = await getAdminUser();
+  if (!admin?.admin?.isAdmin) return [];
+  const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
+  const rows = await prisma.order.findMany({
+    where: { futureApptAt: { gte: today } },
+    select: {
+      id: true,
+      userId: true,
+      medicineName: true,
+      futureApptAt: true,
+      futureApptTime: true,
+      user: { select: { email: true, account: { select: { firstName: true, lastName: true } } } },
+    },
+    orderBy: { futureApptAt: "asc" },
+    take: 1000,
+  });
+  return rows.map((o) => ({
+    day: o.futureApptAt.toISOString().slice(0, 10),
+    time: o.futureApptTime || "",
+    orderId: o.id,
+    userId: o.userId,
+    medicine: o.medicineName,
+    name:
+      [o.user?.account?.firstName, o.user?.account?.lastName].filter(Boolean).join(" ") ||
+      o.user?.email ||
+      `Order #${o.id}`,
+  }));
+}
