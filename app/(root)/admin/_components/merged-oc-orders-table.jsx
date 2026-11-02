@@ -64,6 +64,7 @@ import {
   createOrderFromBooking,
   deleteBooking,
   getAllBookingOrdersAction,
+  getAllBookingsAction,
   updateBookingStatus,
 } from "@/actions/booking.action";
 import {
@@ -384,7 +385,12 @@ export default function MergedOcOrdersTable() {
     // Skeleton only when there is nothing to show yet.
     setLoading(!cached);
     try {
-      const [bookingRes, orderRes] = await Promise.all([
+      const dateArgs = {
+        year: year || undefined,
+        month: month || undefined,
+        day: day || undefined,
+      };
+      const [bookingRes, orderRes, directRes] = await Promise.all([
         getAllBookingOrdersAction({
           year: year || undefined,
           month: month || undefined,
@@ -398,9 +404,15 @@ export default function MergedOcOrdersTable() {
           page: 0,
           pageSize: 5000,
         }),
+        // Appointments booked straight from /booking (no account). They used
+        // to show only on the Appointments page, which is hidden from the menu.
+        getAllBookingsAction(dateArgs).catch(() => ({ bookings: [] })),
       ]);
 
-      const bookings = (bookingRes?.bookings || []).map(normaliseBooking);
+      const bookings = [
+        ...(bookingRes?.bookings || []),
+        ...(directRes?.bookings || []),
+      ].map(normaliseBooking);
       const orders = (orderRes?.orders || []).map(normaliseOrder);
 
       // One combined row per patient journey (booking + its order).
