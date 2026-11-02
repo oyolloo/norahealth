@@ -781,9 +781,16 @@ const STATUS_STYLE = {
   sending: "border-[#EBD3B4] bg-[#FBF0E2] text-[#8A5A12]",
 };
 
+const LOG_PAGE_SIZE = 10;
+
 export function SmsLogTable({ logs }) {
+  const [page, setPage] = useState(0);
   if (!logs.length) return <p className="text-sm text-[#6B6660]">No messages yet.</p>;
+  const pages = Math.max(1, Math.ceil(logs.length / LOG_PAGE_SIZE));
+  const current = Math.min(page, pages - 1);
+  const shown = logs.slice(current * LOG_PAGE_SIZE, (current + 1) * LOG_PAGE_SIZE);
   return (
+    <div>
     <div className="rounded-md border overflow-x-auto">
       <Table className="min-w-max">
         <TableHeader>
@@ -796,7 +803,7 @@ export function SmsLogTable({ logs }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {logs.map((l) => (
+          {shown.map((l) => (
             <TableRow key={l.id}>
               <TableCell>
                 {new Date(l.createdAt).toLocaleString("en-GB", {
@@ -817,6 +824,21 @@ export function SmsLogTable({ logs }) {
           ))}
         </TableBody>
       </Table>
+    </div>
+      {/* Same Previous / Next controls as the other admin tables. */}
+      <div className="flex items-center justify-between gap-2 pt-4">
+        <div className="text-sm text-muted-foreground">
+          {current * LOG_PAGE_SIZE + 1}-{current * LOG_PAGE_SIZE + shown.length} of {logs.length} · Page {current + 1} of {pages}
+        </div>
+        <div className="space-x-2">
+          <Button variant="outline" size="sm" onClick={() => setPage(current - 1)} disabled={current === 0}>
+            Previous
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setPage(current + 1)} disabled={current >= pages - 1}>
+            Next
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
