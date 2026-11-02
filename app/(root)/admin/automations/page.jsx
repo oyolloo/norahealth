@@ -66,7 +66,7 @@ const AutomationsPage = async () => {
         <OptOutList optOuts={res.optOuts} ready={res.ready} />
       </Card>
 
-      <Card title="Recent messages" subtitle="The last 50 texts: sent, skipped or failed, with the reason.">
+      <Card title="Recent messages" subtitle="The last 500 texts: sent, skipped or failed, with the reason. 10 per page.">
         <SmsLogTable logs={res.logs} />
       </Card>
     </div>

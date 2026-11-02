@@ -34,7 +34,7 @@ export async function getAutomationsPageAction() {
   const balance = s.apiKey ? await getBalance(s.apiKey) : null;
   const [logs, optOuts] = ready
     ? await Promise.all([
-        prisma.smsLog.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
+        prisma.smsLog.findMany({ orderBy: { createdAt: "desc" }, take: 500 }),
         prisma.smsOptOut.findMany({ orderBy: { createdAt: "desc" } }),
       ])
     : [[], []];
