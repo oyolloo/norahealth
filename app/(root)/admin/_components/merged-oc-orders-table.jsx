@@ -893,23 +893,9 @@ export default function MergedOcOrdersTable() {
                         <ApptDateTime appointment={r.appointment} />
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">
-                        {r.booking?.bookingType === "Review" ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedReviewRow(r);
-                            }}
-                            className="inline-flex items-center gap-1 font-semibold text-[#1F7A4D] hover:underline cursor-pointer"
-                            title="Change review date/time"
-                          >
-                            <span>Review</span>
-                            <Pencil className="size-3 text-[#1F7A4D]" />
-                          </button>
-                        ) : (
-                          ocTypeLabel(r.booking?._raw?.ocRequest) ||
-                          (r.booking && !r.order ? "APPT" : "—")
-                        )}
+                        {/* Type is Same / New / MAP, or APPT. "Review" lives in Column Type. */}
+                        {ocTypeLabel(r.booking?._raw?.ocRequest) ||
+                          (r.booking && !r.order && r.booking.bookingType !== "Review" ? "APPT" : "—")}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {r.booking ? (
@@ -998,6 +984,20 @@ export default function MergedOcOrdersTable() {
                       </TableCell>
                       {/* Column Type: came in through a booked appointment, or an order on its own */}
                       <TableCell>
+                        {r.booking?.bookingType === "Review" ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedReviewRow(r);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full border border-[#B7E1CD] bg-[#E6F4EC] px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-[#1F7A4D] hover:bg-[#D5EDE0] cursor-pointer"
+                            title="Change or cancel this review"
+                          >
+                            Review
+                            <Pencil className="size-3" />
+                          </button>
+                        ) : (
                         <span
                           className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${
                             r.booking?.bookingType === "Review"
@@ -1013,6 +1013,7 @@ export default function MergedOcOrdersTable() {
                             ? "Appointment"
                             : "Order"}
                         </span>
+                        )}
                       </TableCell>
                       <TableCell
                         className="text-right"
