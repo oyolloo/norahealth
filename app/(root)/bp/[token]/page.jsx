@@ -38,13 +38,8 @@ export default async function BpPage({ params }) {
     );
   }
 
-  const patientName = [
-    reading.user?.account?.firstName,
-    reading.user?.account?.lastName,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .trim() || "Patient";
+  // First name only: the page opens without a login.
+  const patientName = reading.user?.account?.firstName?.trim() || "there";
 
   const futureApptDate = reading.order?.futureApptAt;
   const reviewDateFormatted = futureApptDate
