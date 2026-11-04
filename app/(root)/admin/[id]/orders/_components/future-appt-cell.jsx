@@ -30,7 +30,6 @@ import {
   offDayWarning,
 } from "@/lib/futureAppt";
 
-
 // Format: Wed 05 Jan 27
 function longDate(day) {
   return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", {
@@ -100,18 +99,15 @@ function CustomDayPicker({ today, day, onChange }) {
             <Calendar
               mode='single'
               selected={toLocalDate(day)}
-              defaultMonth={toLocalDate(day)}
-              captionLayout='dropdown'
-              startMonth={toLocalDate(today)}
-              endMonth={toLocalDate(addDays(today, MAX_DAYS))}
-              disabled={[
-                { before: toLocalDate(addDays(today, 1)), after: toLocalDate(addDays(today, MAX_DAYS)) },
-                { dayOfWeek: OFF_WEEKDAYS },
-              ]}
               onSelect={(d) => {
-                if (!d) return;
-                onChange(fromLocalDate(d));
-                setOpen(false);
+                if (d) {
+                  onChange(fromLocalDate(d));
+                  setOpen(false);
+                }
+              }}
+              disabled={(d) => {
+                const ymd = fromLocalDate(d);
+                return ymd <= today || daysBetween(today, ymd) > MAX_DAYS;
               }}
             />
           </PopoverContent>
@@ -130,14 +126,17 @@ function DaysBadge({ days }) {
   );
 }
 
-function FutureApptDialog({ order, open, onOpenChange }) {
+export function FutureApptDialog({ order, open, onOpenChange, onSaved, isReview }) {
   const today = londonParts(new Date()).date;
-  const savedDay = dayOf(order.futureApptAt);
+  const savedDay = dayOf(order?.futureApptAt) || (order?.appointment ? dayOf(order.appointment) : null);
+  const initialTime = order?.futureApptTime || (order?.notes?.match(/Review:\s*([^\s(]+)/)?.[1]) || "";
+  const isEditing = Boolean(isReview || savedDay || order?.isReview || order?.bookingType === "Review");
   const [mode, setMode] = React.useState(() =>
-    order.futureApptDays && PRESET_DAYS.includes(order.futureApptDays) ? String(order.futureApptDays) : savedDay ? "custom" : "84",
+    order.futureApptDays && PRESET_DAYS.includes(order.futureApptDays) ? String(order.futureApptDays) : savedDay ? "custom" : "56",
   );
   const [customDay, setCustomDay] = React.useState(savedDay && savedDay > today ? savedDay : addDays(today, 1));
-  const [time, setTime] = React.useState(order.futureApptTime || "");
+  const [time, setTime] = React.useState(initialTime);
+  const [needsBpCheck, setNeedsBpCheck] = React.useState(Boolean(order?.needsBpCheck));
   const day = mode === "custom" ? customDay : addDays(today, Number(mode));
   const warning = offDayWarning(day, time);
   // Saving on an off day needs a deliberate yes, asked again for each new day/time.
@@ -148,6 +147,7 @@ function FutureApptDialog({ order, open, onOpenChange }) {
   React.useEffect(() => {
     if (state?.success === true) {
       toast.success(state.msg);
+      if (onSaved) onSaved(state);
       onOpenChange(false);
     } else if (state?.success === false) toast.error(state.msg);
   }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -156,18 +156,19 @@ function FutureApptDialog({ order, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-md'>
         <DialogHeader>
-          <DialogTitle>{savedDay ? "Edit future appointment" : "Add future appointment"}</DialogTitle>
+          <DialogTitle>{isEditing ? "Change future review" : "Add future appointment"}</DialogTitle>
           <DialogDescription>
-            {order.medicineName}. The patient gets the review reminders by SMS when those automations are on.
+            {order?.medicineName || "Oral Contraception"}. The patient gets review reminders by SMS when automations are enabled.
           </DialogDescription>
         </DialogHeader>
         <form action={action} className='space-y-4'>
-          <input type='hidden' name='orderId' value={order.id} />
+          <input type='hidden' name='orderId' value={order?.id || order?.orderId} />
           <input type='hidden' name='day' value={day} />
           <input type='hidden' name='time' value={time} />
+          <input type='hidden' name='needsBpCheck' value={needsBpCheck ? "1" : "0"} />
           <div className='space-y-2'>
             <Label>When</Label>
-            <div className='grid grid-cols-3 gap-2'>
+            <div className='grid grid-cols-2 sm:grid-cols-4 gap-2'>
               {[...PRESET_DAYS.map(String), "custom"].map((m) => (
                 <Button
                   key={m}
@@ -175,7 +176,7 @@ function FutureApptDialog({ order, open, onOpenChange }) {
                   variant={mode === m ? "default" : "outline"}
                   onClick={() => setMode(m)}
                 >
-                  {m === "custom" ? "Custom" : `${m} days`}
+                  {m === "custom" ? "Pick a date" : `${m} days`}
                 </Button>
               ))}
             </div>
@@ -197,6 +198,20 @@ function FutureApptDialog({ order, open, onOpenChange }) {
               </SelectContent>
             </Select>
           </div>
+          <div className='rounded-md border border-[#E2E8F0] bg-[#F8FAFC] p-3'>
+            <label className='flex items-center gap-2 cursor-pointer font-medium text-sm text-[#0D060C]'>
+              <input
+                type='checkbox'
+                checked={needsBpCheck}
+                onChange={(e) => setNeedsBpCheck(e.target.checked)}
+                className='size-4 accent-[#CE8936]'
+              />
+              <span>BP SMS (Type B medicine)</span>
+            </label>
+            <p className='mt-1 text-xs text-muted-foreground ml-6'>
+              Sends a blood pressure submission link 28 days before review.
+            </p>
+          </div>
           {warning ? (
             <div role='alert' className='rounded-md border border-[#EBD3B4] bg-[#FBF0E2] p-3 text-sm text-[#8A5A12]'>
               <p className='flex items-start gap-2'>
@@ -215,15 +230,22 @@ function FutureApptDialog({ order, open, onOpenChange }) {
             </div>
           ) : null}
           <DialogFooter className='gap-2 sm:justify-between'>
-            {savedDay ? (
-              <Button type='submit' name='clear' value='1' variant='outline' disabled={saving}>
-                Remove
+            {isEditing ? (
+              <Button
+                type='submit'
+                name='clear'
+                value='1'
+                variant='outline'
+                className='text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200'
+                disabled={saving}
+              >
+                Cancel review
               </Button>
             ) : (
               <span />
             )}
             <Button type='submit' name='save' value='1' disabled={saving || !day || !time || (warning && !okOffDay)}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? "Saving..." : isEditing ? "Save changes" : "Save"}
             </Button>
           </DialogFooter>
         </form>
@@ -232,11 +254,9 @@ function FutureApptDialog({ order, open, onOpenChange }) {
   );
 }
 
-// "Future Appt" column of the patient's orders (CC-10).
 export function FutureApptCell({ order }) {
   const [open, setOpen] = React.useState(false);
-  const today = londonParts(new Date()).date;
-  const state = futureApptState(order, today);
+  const state = futureApptState(order);
   const day = dayOf(order.futureApptAt);
 
   if (state === "past")

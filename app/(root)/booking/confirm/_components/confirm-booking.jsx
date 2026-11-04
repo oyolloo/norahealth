@@ -18,8 +18,8 @@ const ConfirmBooking = ({ userDetails }) => {
 
   const fullNameFromAccount = userDetails?.account
     ? [userDetails.account.firstName, userDetails.account.lastName]
-        .filter(Boolean)
-        .join(" ")
+      .filter(Boolean)
+      .join(" ")
     : "";
 
   // Prefer what the patient actually typed on the /booking step (carried across

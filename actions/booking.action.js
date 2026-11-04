@@ -88,17 +88,7 @@ export async function createBooking(formData) {
     const bookingdate = formData.get("bookingdate")?.toString(); // "YYYY-MM-DD"
     const bookingtime = formData.get("bookingtime")?.toString(); // "HH:MM"
 
-    console.log(
-      fullName,
-      email,
-      phoneNumber,
-      serviceName,
-      providerName,
-      nhsService,
-      bookingdate,
-      bookingtime,
-      "booking action",
-    );
+    // Patient details are not logged (privacy).
 
     if (
       !fullName ||
@@ -192,44 +182,44 @@ export async function createBooking(formData) {
           .filter(Boolean)
           .join("\n");
 
-        const res=await createCalendarEvent({
+        const res = await createCalendarEvent({
           calendarId,
           start: appointmentStart,
           end: appointmentEnd,
           summary,
           description,
-          location: "Manor Chemist & Clinic, 341 Tamworth Ln, Mitcham CR4 1DL",
+          location: "Phone call — Nora Health will call you",
           email,
           name: fullName,
         });
         console.log("res calander", res);
-        
+
       } else {
-       console.warn("GOOGLE_CALENDAR_ID not set; skipping calendar event");
+        console.warn("GOOGLE_CALENDAR_ID not set; skipping calendar event");
       }
     } catch (calendarError) {
       console.error("Failed to create Google Calendar event:", calendarError);
       console.error("Failed to create Google Calendar event:", calendarError);
-  console.error("Error details:", calendarError.stack);
+      console.error("Error details:", calendarError.stack);
       // we don't fail the booking for this
     }
 
-   try {
-  await sendBookingConfirmationEmail({
-    to: email,
-    fullName,
-    serviceName,
-    providerName,
-    nhsService,
-    appointment: appointmentStart,
-    appointmentEnd: appointmentEnd,
-    notes,
-    phoneNumber,
-  });
-} catch (emailError) {
-  console.error("Booking confirmation email failed:", emailError);
-  // booking should NOT fail because of email
-}
+    try {
+      await sendBookingConfirmationEmail({
+        to: email,
+        fullName,
+        serviceName,
+        providerName,
+        nhsService,
+        appointment: appointmentStart,
+        appointmentEnd: appointmentEnd,
+        notes,
+        phoneNumber,
+      });
+    } catch (emailError) {
+      console.error("Booking confirmation email failed:", emailError);
+      // booking should NOT fail because of email
+    }
 
     return {
       success: true,
@@ -437,27 +427,27 @@ export async function createBookingOrder(formData) {
 
 
     // ✅ send confirmation email (non-blocking)
-try {
-  await sendOrderBookingConfirmationEmail({
-    to: email,
-    fullName,
-    firstName: user.account?.firstName,
-    phoneNumber: user.account?.phoneNumber || phoneNumber,
-    serviceName,
-    providerName,
-    nhsService,
-    ocRequest,
-    appointmentRequest,
-    appointment: appointmentStart,
-    slotStartTime: slot.startTime,
-    slotEndTime: slot.endTime,
-    createdAt: booking.createdAt || now,
-    deliveryAddress: user.account.deliveryAddress || user.account.address || "",
-    notes,
-  });
-} catch (emailError) {
-  console.error("Order booking confirmation email failed:", emailError);
-}
+    try {
+      await sendOrderBookingConfirmationEmail({
+        to: email,
+        fullName,
+        firstName: user.account?.firstName,
+        phoneNumber: user.account?.phoneNumber || phoneNumber,
+        serviceName,
+        providerName,
+        nhsService,
+        ocRequest,
+        appointmentRequest,
+        appointment: appointmentStart,
+        slotStartTime: slot.startTime,
+        slotEndTime: slot.endTime,
+        createdAt: booking.createdAt || now,
+        deliveryAddress: user.account.deliveryAddress || user.account.address || "",
+        notes,
+      });
+    } catch (emailError) {
+      console.error("Order booking confirmation email failed:", emailError);
+    }
 
     return {
       success: true,
@@ -506,7 +496,7 @@ export async function getAllBookingsAction({ year, month, day } = {}) {
 
     return true;
   });
-   // emails from bookings
+  // emails from bookings
   const emails = [
     ...new Set(
       bookings
@@ -550,7 +540,9 @@ export async function getAllBookingsAction({ year, month, day } = {}) {
 }
 export async function getAllBookingOrdersAction({ year, month, day } = {}) {
   let bookings = await prisma.booking.findMany({
-    where: { bookingType: "Order" },
+    // "Booking" rows (from /booking) come in via getAllBookingsAction (#61);
+    // loading them here too would list every one twice.
+    where: { bookingType: { in: ["Order", "Review"] } },
     orderBy: { createdAt: "desc" }, // ✅ newest first
   });
 
@@ -575,7 +567,7 @@ export async function getAllBookingOrdersAction({ year, month, day } = {}) {
   });
 
   // return { success: true, msg: "OK", bookings };
-   // emails from bookings
+  // emails from bookings
   const emails = [
     ...new Set(
       bookings
@@ -636,6 +628,20 @@ export const deleteBooking = async (formDataOrObj) => {
   if (!b) return { success: false, msg: "Booking not found" };
 
   await prisma.booking.delete({ where: { id: Number(bookingId) } });
+  if (b.bookingType === "Review" && b.orderId) {
+    try {
+      await prisma.order.update({
+        where: { id: b.orderId },
+        data: {
+          futureApptAt: null,
+          futureApptDays: null,
+          futureApptTime: null,
+        },
+      });
+    } catch (orderErr) {
+      console.warn("Failed to clear order futureAppt on review cancel:", orderErr);
+    }
+  }
 
   if (b.slotId) {
     await prisma.bookingSlot.update({
@@ -652,6 +658,7 @@ export const deleteBooking = async (formDataOrObj) => {
 
   // revalidate admin page
   revalidatePath("/admin/appointments");
+  revalidatePath("/admin/oc-orders");
 
   return { success: true, msg: "Booking deleted" };
 };
@@ -1182,6 +1189,7 @@ export async function createOrderFromBooking({
     }
 
     revalidatePath("/admin/appointments");
+  revalidatePath("/admin/oc-orders");
     return { success: true, msg: "Order created successfully" };
   } catch (err) {
     console.error(err);
@@ -1236,7 +1244,8 @@ export async function updateBookingStatus(formDataOrObj) {
       .catch((err) => console.error("statusChangedAt not saved:", err?.message));
 
     // ✅ revalidate (adjust your routes)
-    revalidatePath("/admin/appointments"); // Booking list
+    revalidatePath("/admin/appointments");
+  revalidatePath("/admin/oc-orders"); // Booking list
     revalidatePath("/admin/appointments-order"); // if you have this route
     revalidatePath(`/admin/appointments-order/${updated.id}`); // details page (optional)
 
@@ -1283,6 +1292,19 @@ export async function getPatientAppointmentsAction(userId) {
       ocRequest: true,
       bookingStatus: true,
       bookingType: true,
+      notes: true,
+      orderId: true,
+      order: {
+        select: {
+          id: true,
+          status: true,
+          trackingId: true,
+          futureApptAt: true,
+          futureApptDays: true,
+          futureApptTime: true,
+          medicineName: true,
+        },
+      },
       slot: { select: { startTime: true, endTime: true } },
     },
   });

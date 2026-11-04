@@ -110,6 +110,7 @@ const page = async ({ params }) => {
             userId={id}
             user={user}
             bookings={appointments?.bookings || []}
+            orders={orders?.orders || []}
             error={appointments?.success ? null : appointments?.msg}
             embedded
           />

@@ -204,15 +204,17 @@ function currentMinutes() {
     router.push("/booking/confirm");
   }
 
-  // filtered slots for UI
+  // filtered slots for UI - hide full and past slots
 const visibleSlots = useMemo(() => {
   if (!value) return [];
-  if (!isSameDay(value, today)) return timeSlots; // not today -> show all
-
   const nowMins = currentMinutes();
+  const isToday = isSameDay(value, today);
 
-  // rule: hide slots that already started (startTime <= now)
-  return timeSlots.filter((slot) => toMinutes(slot.startTime) > nowMins);
+  return timeSlots.filter((slot) => {
+    if (slot.isFull) return false;
+    if (isToday && toMinutes(slot.startTime) <= nowMins) return false;
+    return true;
+  });
 }, [timeSlots, value, today, nowTick]);
 
   return (

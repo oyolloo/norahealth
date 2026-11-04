@@ -23,6 +23,7 @@ model User {
   role        Role?        @default(PATIENT)
 
   passwordResetTokens PasswordResetToken[]
+  bpReadings          BpReading[]
 }
 
 model PasswordResetToken {
@@ -85,6 +86,9 @@ model Order {
   futureApptAt   DateTime?
   futureApptDays Int?
   futureApptTime String?
+  bookings       Booking[]
+  needsBpCheck   Boolean     @default(false)
+  bpReadings     BpReading[]
 }
 
 enum OrderStatus {
@@ -161,10 +165,14 @@ model Booking {
   slotId Int?
   slot   BookingSlot? @relation(fields: [slotId], references: [id])
 
+  orderId Int?
+  order   Order?       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
   // Set when bookingStatus changes (CC-9, failed-encounter SMS).
   statusChangedAt DateTime?
 
   @@index([slotId])
+  @@index([orderId])
 }
 
 enum BookingStatus {
@@ -178,6 +186,7 @@ enum BookingStatus {
 enum BookingType {
   Booking
   Order
+  Review
 }
 
 model Post {
@@ -219,7 +228,6 @@ enum OcRequest {
   MORNING_AFTER_PILL
 }
 
-
 // Admin-editable site settings, one row per key.
 model AppSetting {
   key       String   @id
@@ -241,6 +249,7 @@ model SmsLog {
   recalloId  String?
   error      String?
   sentBy     String?
+  repliedAt  DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -253,4 +262,27 @@ model SmsOptOut {
   phone     String   @id
   note      String?
   createdAt DateTime @default(now())
+}
+
+// Blood pressure remote monitoring readings submitted by patients (Task #5).
+model BpReading {
+  id          Int       @id @default(autoincrement())
+  token       String    @unique
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId     Int?
+  order       Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  systolic    Int?
+  diastolic   Int?
+  readingDate DateTime?
+  reviewDate  DateTime? // Future Appt day this request belongs to (one reading per review)
+  expiresAt   DateTime? // link stops working after this
+  status      String    @default("pending") // "pending" | "submitted"
+  submittedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([token])
+  @@unique([orderId, reviewDate])
 }
