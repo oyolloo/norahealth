@@ -38,6 +38,20 @@ export default async function BpPage({ params }) {
     );
   }
 
+  if (reading.alreadySubmitted) {
+    const first = reading.user?.account?.firstName?.trim() || "there";
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md rounded-2xl border border-[#E7D8C6] bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-[#0D060C]">Thank you, {first}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We have your blood pressure reading. Our clinician will review it at your appointment.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // First name only: the page opens without a login.
   const patientName = reading.user?.account?.firstName?.trim() || "there";
 
