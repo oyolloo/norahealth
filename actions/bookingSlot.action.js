@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/client/prisma";
 import { revalidatePath } from "next/cache";
+import { getAdminUser } from "./admin.action";
 
 /* ------------------ helpers ------------------ */
 const isWeekendYMD = (ymd) => {
@@ -364,6 +365,11 @@ export async function getBookingSlots(formDataOrDate) {
 
     const slotDate = parseYMDtoDate(dateStr);
 
+    // Patient names, emails and phones go to the admin calendar only, never
+    // to the public booking page that uses this same action.
+    const admin = await getAdminUser().catch(() => null);
+    const isAdmin = Boolean(admin?.admin?.isAdmin);
+
     const rows = await prisma.bookingSlot.findMany({
       where: {
         slotDate,
@@ -373,7 +379,7 @@ export async function getBookingSlots(formDataOrDate) {
       },
       include: {
         _count: { select: { bookings: true } },
-        bookings: {
+        bookings: isAdmin && {
           select: {
             id: true,
             fullName: true,
@@ -407,7 +413,7 @@ export async function getBookingSlots(formDataOrDate) {
         remaining: Math.max(0, capacity - booked),
         isFull: booked >= capacity,
         isBooked: row.isBooked || booked >= capacity,
-        bookings: row.bookings || [],
+        bookings: isAdmin ? row.bookings || [] : [],
       };
     });
 

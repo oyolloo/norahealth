@@ -145,6 +145,7 @@ function BookingsDesktop() {
               value={slot}
               onSelect={setSlot}
               autoSelectSlot={false}
+          showTurnaround={false}
             />
           </div>
 

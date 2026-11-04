@@ -63,6 +63,9 @@ export default function AppointmentPicker({
   value,
   onSelect,
   autoSelectSlot = true,
+  // Delivery turnaround labels only make sense in the order flow; the
+  // telephone-only /booking page passes false.
+  showTurnaround = true,
 }) {
   const today = useMemo(() => startOfDay(new Date()), [])
   const [weekStart, setWeekStart] = useState(today)
@@ -278,6 +281,7 @@ export default function AppointmentPicker({
         </div>
       </div>
 
+      {showTurnaround && (<>
       <p className='text-xs font-medium text-center text-black max-w-[230px] leading-5'>
         Free next day delivery available on all appointments completed before
         1pm
@@ -298,6 +302,7 @@ export default function AppointmentPicker({
           <span className='text-[#3A3D42]'>2-day delivery</span>
         </span>
       </div>
+      </>)}
 
       {/* Time-window grid */}
       <div className='w-full'>
@@ -334,7 +339,7 @@ export default function AppointmentPicker({
                     .filter(Boolean)
                     .join(' ')}
                 >
-                  <span
+                  {showTurnaround && (<span
                     className={[
                       'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none',
                       active
@@ -352,7 +357,7 @@ export default function AppointmentPicker({
                       className='h-auto w-5 shrink-0 object-contain'
                     />
                     {turn}h
-                  </span>
+                  </span>)}
                   <span
                     className={[
                       'text-xs text-center tracking-[-0.2px] whitespace-nowrap',

@@ -57,9 +57,9 @@ export default function BookingsMobile() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <h2 className="text-[20px] leading-[27px] font-semibold text-[#0D060C] tracking-[-0.3px]">
-        Book a free appointment in just a few clicks
+        Book a free telephone appointment
       </h2>
 
       {/* Contact fields */}
@@ -91,13 +91,11 @@ export default function BookingsMobile() {
 
       {/* Calendar + slots block (matching order booking design) */}
       <div className="bg-[#FAF9F8] border border-[#EEE0CF] rounded-[16px] p-4 flex flex-col gap-4">
-        <h3 className="text-base font-semibold text-[#0D060C] tracking-[-0.3px]">
-          Book your appointment
-        </h3>
         <AppointmentPicker
           value={slot}
           onSelect={setSlot}
           autoSelectSlot={false}
+          showTurnaround={false}
         />
       </div>
 
@@ -108,7 +106,7 @@ export default function BookingsMobile() {
         </label>
         <textarea
           name="notes"
-          rows={3}
+          rows={2}
           value={form.notes}
           onChange={handleChange}
           placeholder="Please give brief details of your query"
@@ -158,8 +156,9 @@ export default function BookingsMobile() {
 
 const Field = ({ label, ...props }) => (
   <div className="flex flex-col gap-2">
-    <label className="hidden text-sm text-[#3A3D42] tracking-[-0.2px]">{label}</label>
+    <label htmlFor={props.name} className="sr-only text-sm text-[#3A3D42] tracking-[-0.2px]">{label}</label>
     <input
+      id={props.name}
       {...props}
       className="bg-white border border-[#EEE0CF] text-[#0D060C] placeholder:text-[#3A3D42] text-sm tracking-[-0.2px] w-full px-5 py-3.5 rounded-[8px] outline-none focus:border-[#CE8936] transition"
     />

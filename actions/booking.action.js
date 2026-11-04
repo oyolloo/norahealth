@@ -88,17 +88,7 @@ export async function createBooking(formData) {
     const bookingdate = formData.get("bookingdate")?.toString(); // "YYYY-MM-DD"
     const bookingtime = formData.get("bookingtime")?.toString(); // "HH:MM"
 
-    console.log(
-      fullName,
-      email,
-      phoneNumber,
-      serviceName,
-      providerName,
-      nhsService,
-      bookingdate,
-      bookingtime,
-      "booking action",
-    );
+    // Patient details are not logged (privacy).
 
     if (
       !fullName ||
