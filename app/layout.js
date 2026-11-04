@@ -45,7 +45,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body suppressHydrationWarning>
+      <body>
         {/* ✅ GTM NoScript (immediately after body open) */}
         <noscript>
           <iframe

@@ -275,6 +275,8 @@ model BpReading {
   systolic    Int?
   diastolic   Int?
   readingDate DateTime?
+  reviewDate  DateTime? // Future Appt day this request belongs to (one reading per review)
+  expiresAt   DateTime? // link stops working after this
   status      String    @default("pending") // "pending" | "submitted"
   submittedAt DateTime?
   createdAt   DateTime  @default(now())
@@ -282,4 +284,5 @@ model BpReading {
 
   @@index([userId, createdAt])
   @@index([token])
+  @@unique([orderId, reviewDate])
 }

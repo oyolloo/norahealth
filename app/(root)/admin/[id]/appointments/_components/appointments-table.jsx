@@ -45,7 +45,6 @@ import { formatDate, formatShortDate, getFullName } from "@/lib/utils";
 import { ocTypeLabel } from "@/lib/ocType";
 import AdminNavigation from "../../_components/admin-navigation";
 import { BookingStatusInline, OrderStatusInline } from "../../_components/inline-status";
-import { CreateAppointmentForm } from "./create-appointment-form";
 
 const OC_TEXT = {
   SAME_OC: "I would like to order a pill which I am currently taking",
@@ -256,10 +255,9 @@ export function AppointmentsTable({
         </>
       )}
 
-      {/* TOOLBAR: Create Appointment + Appointment Window + Columns Dropdown */}
+      {/* TOOLBAR: Appointment Window + Columns Dropdown */}
       <div className="flex flex-wrap items-center justify-between gap-4 py-4">
         <div className="flex flex-wrap items-center gap-3">
-          <CreateAppointmentForm userId={userId} user={user} />
           <Select value={apptWindow} onValueChange={setApptWindow}>
             <SelectTrigger className="w-[180px] bg-white">
               <SelectValue placeholder="Appointment Window" />
