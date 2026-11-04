@@ -540,7 +540,9 @@ export async function getAllBookingsAction({ year, month, day } = {}) {
 }
 export async function getAllBookingOrdersAction({ year, month, day } = {}) {
   let bookings = await prisma.booking.findMany({
-    where: { bookingType: { in: ["Order", "Booking", "Review"] } },
+    // "Booking" rows (from /booking) come in via getAllBookingsAction (#61);
+    // loading them here too would list every one twice.
+    where: { bookingType: { in: ["Order", "Review"] } },
     orderBy: { createdAt: "desc" }, // ✅ newest first
   });
 

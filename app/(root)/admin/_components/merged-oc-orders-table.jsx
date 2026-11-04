@@ -351,7 +351,7 @@ export default function MergedOcOrdersTable() {
   const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
   const [nameSearch, setNameSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL"); // ALL | appointment | order
-  const [apptWindow, setApptWindow] = useState("ALL"); // ALL | today | next3 | next7 | missed
+  const [apptWindow, setApptWindow] = useState("today"); // ALL | today | next3 | next7 | missed. Opens on Today (client, 12 Oct meeting [48:40]).
 
   const [rows, setRows] = useState(() => rowsCache.get("||") || []);
   const [loading, setLoading] = useState(() => !rowsCache.has("||"));
@@ -812,27 +812,6 @@ export default function MergedOcOrdersTable() {
           </Select>
         </div>
 
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">
-            Appointment Window
-          </label>
-          <Select
-            value={apptWindow}
-            onValueChange={setApptWindow}
-          >
-            <SelectTrigger className="w-[170px] bg-white/40">
-              <SelectValue placeholder="All" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="next3">Next 3 days</SelectItem>
-              <SelectItem value="next7">Next 7 days</SelectItem>
-              <SelectItem value="missed">Missed call</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="ml-auto">
           <Button
             variant="outline"
@@ -844,7 +823,7 @@ export default function MergedOcOrdersTable() {
               setOrderStatusFilter("ALL");
               setNameSearch("");
               setTypeFilter("ALL");
-              setApptWindow("ALL");
+              setApptWindow("today");
             }}
           >
             Clear filters

@@ -830,8 +830,6 @@ export function SmsLogTable({ logs }) {
                     No reply yet
                   </Badge>
                 ) : null}
-                <Badge className="hidden">
-                </Badge>
               </TableCell>
               <TableCell className="text-[#6B6660] whitespace-normal max-w-[40ch]">{l.error || l.sentBy || ""}</TableCell>
             </TableRow>
