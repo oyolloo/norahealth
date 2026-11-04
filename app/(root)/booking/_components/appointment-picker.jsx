@@ -106,9 +106,21 @@ export default function AppointmentPicker({
 
   function isBookable(date) {
     if (date < today) return false
-    if (isSameDay(date, today)) return true
     return bookableDates.some((d) => isSameDay(d, date))
   }
+
+  // If today is not bookable (e.g. all slots full/past), auto-select first available bookable day
+  useEffect(() => {
+    if (!bookableDates.length) return
+    const isTodayBookable = bookableDates.some((d) => isSameDay(d, today))
+    if (!isTodayBookable) {
+      const firstBookable = bookableDates.find((d) => d >= today)
+      if (firstBookable) {
+        setSelectedDate(firstBookable)
+        setWeekStart(firstBookable)
+      }
+    }
+  }, [bookableDates, today])
 
   const selectedIsBookable = isBookable(selectedDate)
 
@@ -143,6 +155,12 @@ export default function AppointmentPicker({
     [timeSlots, isToday, nowMins],
   )
 
+  // Hide slots that are already full or past
+  const visibleSlots = useMemo(
+    () => slots.filter((s) => !s.isPast && !s.isFull),
+    [slots]
+  )
+
   // Default: pre-select the next available slot on the next available day.
   useEffect(() => {
     if (autoSelected || value) return
@@ -157,6 +175,7 @@ export default function AppointmentPicker({
         onSelect?.({
           date: formatYMD(selectedDate),
           time: avail.startTime,
+          endTime: avail.endTime,
           label: avail.label,
         })
       }
@@ -192,6 +211,7 @@ export default function AppointmentPicker({
     onSelect?.({
       date: formatYMD(selectedDate),
       time: s.startTime,
+      endTime: s.endTime,
       label: s.label,
     })
   }
@@ -289,38 +309,27 @@ export default function AppointmentPicker({
           <p className='text-center text-xs text-[#6B7280]'>
             Loading time slots…
           </p>
-        ) : slots.length === 0 ? (
-          <p className='text-center text-xs text-[#6B7280]'>
-            No time slots for this date.
+        ) : visibleSlots.length === 0 ? (
+          <p className='text-center text-xs text-[#6B7280] py-4'>
+            No available time slots for this date. Please pick another day.
           </p>
         ) : (
           <div className='grid grid-cols-3 gap-[6px]'>
-            {slots.map((s) => {
-              const disabled = s.isPast || s.isFull
+            {visibleSlots.map((s) => {
               const active =
                 value &&
                 value.time === s.startTime &&
                 value.date === formatYMD(selectedDate)
-              const state = disabled ? 'gray' : active ? 'white' : 'orange'
+              const state = active ? 'white' : 'orange'
               const turn = turnHours(s.startTime)
               return (
                 <button
                   type='button'
                   key={s.id}
                   onClick={() => pickSlot(s)}
-                  disabled={disabled}
-                  title={
-                    s.isFull
-                      ? 'Fully booked'
-                      : s.isPast
-                        ? 'Time has passed'
-                        : undefined
-                  }
                   className={[
                     'flex flex-col items-center justify-end gap-1 rounded-[8px] px-3 py-1.5 transition cursor-pointer',
-                    disabled && 'bg-[#F0F0F0] cursor-not-allowed',
-                    active && 'bg-[#D6866B]',
-                    !disabled && !active && 'border border-[#CE8936]',
+                    active ? 'bg-[#D6866B]' : 'border border-[#CE8936]',
                   ]
                     .filter(Boolean)
                     .join(' ')}
@@ -328,13 +337,11 @@ export default function AppointmentPicker({
                   <span
                     className={[
                       'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none',
-                      disabled
-                        ? 'bg-[#E5E5E5] text-[#A3A3A3]'
-                        : active
-                          ? 'bg-white/25 text-white'
-                          : turn === '24'
-                            ? 'bg-[#E7F4EC] text-[#1F7A45]'
-                            : 'bg-[#FBEEDD] text-[#B5751B]',
+                      active
+                        ? 'bg-white/25 text-white'
+                        : turn === '24'
+                          ? 'bg-[#E7F4EC] text-[#1F7A45]'
+                          : 'bg-[#FBEEDD] text-[#B5751B]',
                     ].join(' ')}
                   >
                     <Image
@@ -349,11 +356,7 @@ export default function AppointmentPicker({
                   <span
                     className={[
                       'text-xs text-center tracking-[-0.2px] whitespace-nowrap',
-                      disabled
-                        ? 'text-[#A3A3A3] line-through'
-                        : active
-                          ? 'text-white'
-                          : 'text-[#0D060C]',
+                      active ? 'text-white' : 'text-[#0D060C]',
                     ].join(' ')}
                   >
                     {fmt(s.startTime)} - {fmt(s.endTime)}

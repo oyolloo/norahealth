@@ -157,7 +157,12 @@ export async function sendTestAction(_prev, formData) {
       automation: `test-${a.id}`,
       phone: to,
       text: a.text,
-      vars: { first_name: "Test", time_frame: "3pm and 4pm", appt_time: "3pm-4pm" },
+      vars: {
+        first_name: "Test",
+        time_frame: "3pm and 4pm",
+        appt_time: "3pm-4pm",
+        link: "norahealth.co.uk/bp/k8J9mX2p",
+      },
       sentBy: admin.admin?.email || "admin",
     });
     if (r.status !== "sent") bad.push(`${to} (${r.error || r.status})`);

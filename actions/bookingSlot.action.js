@@ -371,7 +371,23 @@ export async function getBookingSlots(formDataOrDate) {
       orderBy: {
         startTime: "asc",
       },
-      include: { _count: { select: { bookings: true } } },
+      include: {
+        _count: { select: { bookings: true } },
+        bookings: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phoneNumber: true,
+            bookingType: true,
+            bookingStatus: true,
+            appointment: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
     });
 
     // capacity-aware: a slot is full once booked count reaches capacity.
@@ -390,6 +406,8 @@ export async function getBookingSlots(formDataOrDate) {
         booked,
         remaining: Math.max(0, capacity - booked),
         isFull: booked >= capacity,
+        isBooked: row.isBooked || booked >= capacity,
+        bookings: row.bookings || [],
       };
     });
 
@@ -411,31 +429,67 @@ export async function getBookingSlots(formDataOrDate) {
   }
 }
 
+
 /* ------------------ GET ALL BOOKABLE DATES ------------------ */
 
-export async function getBookableDates() {
+export async function getBookableDates(options) {
+  const includeAll = options === true || options?.all === true || options?.includeAll === true;
   try {
+    if (includeAll) {
+      const rows = await prisma.bookingSlot.findMany({
+        select: {
+          slotDate: true,
+        },
+        distinct: ["slotDate"],
+        orderBy: {
+          slotDate: "asc",
+        },
+      });
+
+      const dateStrings = rows.map((row) => {
+        const d = row.slotDate instanceof Date ? row.slotDate : new Date(row.slotDate);
+        const y = d.getUTCFullYear();
+        const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(d.getUTCDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      });
+
+      return {
+        success: true,
+        msg: "All slot dates fetched successfully.",
+        data: dateStrings,
+      };
+    }
+
     const rows = await prisma.bookingSlot.findMany({
       where: {
         isBooked: false,
       },
       select: {
         slotDate: true,
+        maxCapacity: true,
+        _count: { select: { bookings: true } },
       },
-      distinct: ["slotDate"],
       orderBy: {
         slotDate: "asc",
       },
     });
 
-    // Convert JS Date -> "YYYY-MM-DD" using UTC parts
-    const dateStrings = rows.map((row) => {
-      const d = row.slotDate;
-      const y = d.getUTCFullYear();
-      const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-      const day = String(d.getUTCDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
-    });
+    // Only include days that have at least one slot with remaining capacity
+    const bookableDateSet = new Set();
+    for (const row of rows) {
+      const capacity = row.maxCapacity ?? 1;
+      const booked = row._count?.bookings ?? 0;
+      if (booked < capacity) {
+        const d = row.slotDate instanceof Date ? row.slotDate : new Date(row.slotDate);
+        const y = d.getUTCFullYear();
+        const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(d.getUTCDate()).padStart(2, "0");
+        bookableDateSet.add(`${y}-${m}-${day}`);
+      }
+    }
+
+    const dateStrings = Array.from(bookableDateSet).sort();
 
     return {
       success: true,
@@ -451,6 +505,10 @@ export async function getBookableDates() {
       data: error.message,
     };
   }
+}
+
+export async function getAllSlotDates() {
+  return getBookableDates(true);
 }
 
 export const deleteBookingSlot = async (formDataOrObj) => {

@@ -17,6 +17,7 @@ import {
   Wallet,
   ExternalLink,
   TriangleAlert,
+  Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ import {
 import { CREDITS_PER_SEGMENT, MAX_SEGMENTS, renderText, segmentsOf, smsLimit, toE164Uk } from "@/lib/smsCore";
 
 const initial = { success: null, msg: "" };
-const SAMPLE = { first_name: "Emma", time_frame: "3pm and 4pm", appt_time: "3pm-4pm" };
+const SAMPLE = { first_name: "Emma", time_frame: "3pm and 4pm", appt_time: "3pm-4pm", link: "norahealth.co.uk/bp/k8J9mX2p" };
 const RECALLO24_DASHBOARD = "https://recallo24.oyolloo.com/dashboard";
 const RECALLO24_BILLING = "https://recallo24.oyolloo.com/dashboard/billing";
 // Below this many credits the page asks the admin to top up.
@@ -275,7 +276,7 @@ export function ConnectionPanel({ enabled, hasKey, keyHint, ready, balance, cron
 const GROUPS = [
   { title: "After sign-up", hint: "Only for people who sign up after the message is switched on.", ids: ["1a", "1b"] },
   { title: "Appointments", hint: "Uses the booking and order slots.", ids: ["2", "3"] },
-  { title: "OC reviews", hint: "Set from the Future Appt column on a patient's orders.", ids: ["4a", "4b"] },
+  { title: "OC reviews", hint: "Set from the Future Appt column on a patient's orders.", ids: ["4a", "4b", "4b_bp"] },
   { title: "Sent by your team", hint: "Only goes out when someone presses send.", ids: ["5"] },
 ];
 
@@ -286,6 +287,7 @@ const ICONS = {
   3: CalendarX2,
   "4a": CalendarClock,
   "4b": RefreshCcw,
+  "4b_bp": Heart,
   5: PhoneMissed,
 };
 
@@ -295,7 +297,7 @@ const HOURS = Array.from({ length: 16 }, (_, i) => i + 6);
 function whenText(a) {
   if (a.hour === undefined) return a.when;
   const h = hourText(a.hour);
-  if (a.id === "4b") return `${h}, 28 days before the Future Appt Date`;
+  if (a.id === "4b" || a.id === "4b_bp") return `${h}, 28 days before the Future Appt Date`;
   if (a.id === "4a") return `${h} on the Future Appt Date`;
   if (a.id === "3") return `${h} on the day it is marked Failed Encounter`;
   return `${h} on the day of the appointment`;
@@ -418,7 +420,8 @@ function MessageRow({ a, ready, smsOn }) {
                 {text.length} characters, {parts} SMS part{parts === 1 ? "" : "s"} ({parts * CREDITS_PER_SEGMENT} credits) per patient. You can use{" "}
                 {"{first_name}"}
                 {a.id === "2" || a.id === "4a" ? ", {time_frame}" : ""}
-                {a.id === "3" ? ", {appt_time}" : ""}.
+                {a.id === "3" ? ", {appt_time}" : ""}
+                {a.id === "4b_bp" ? ", {link}" : ""}.
               </p>
               {parts > MAX_SEGMENTS && (
                 <p className="text-xs text-[#9B2C22]">
@@ -810,6 +813,17 @@ export function SmsLogTable({ logs }) {
               <TableCell>
                 <Badge variant="outline" className={STATUS_STYLE[l.status] || ""}>
                   {l.status}
+                </Badge>
+                {l.repliedAt ? (
+                  <Badge variant="outline" className="ml-1.5 border-[#B7E1CD] bg-[#E6F4EC] text-[#1F7A4D]">
+                    Replied
+                  </Badge>
+                ) : l.automation === "4b_bp" && l.status === "sent" ? (
+                  <Badge variant="outline" className="ml-1.5 border-[#D5E1F2] bg-[#F2F6FC] text-[#2B5DA8]">
+                    No reply yet
+                  </Badge>
+                ) : null}
+                <Badge className="hidden">
                 </Badge>
               </TableCell>
               <TableCell className="text-[#6B6660] whitespace-normal max-w-[40ch]">{l.error || l.sentBy || ""}</TableCell>
