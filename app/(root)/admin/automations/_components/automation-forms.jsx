@@ -328,8 +328,9 @@ function MessageRow({ a, ready, smsOn }) {
   }, [state, a.enabled]);
 
   const Icon = ICONS[a.id] || Send;
-  const parts = segmentsOf(text);
-  const savedParts = segmentsOf(a.text);
+  // Count the text as sent: {link} and names filled in, not the raw {tags}.
+  const parts = segmentsOf(renderText(text, SAMPLE));
+  const savedParts = segmentsOf(renderText(a.text, SAMPLE));
   const fields = (
     <>
       <input type="hidden" name="id" value={a.id} />
