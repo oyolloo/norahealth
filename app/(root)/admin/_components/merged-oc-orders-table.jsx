@@ -55,7 +55,10 @@ import {
   LoaderIcon,
   MoreHorizontal,
   PanelLeft,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import { FutureApptDialog } from "../[id]/orders/_components/future-appt-cell";
 
 import { formatDate } from "@/lib/utils";
 import { useAdmin } from "@/lib/adminContext";
@@ -177,6 +180,9 @@ function normaliseBooking(b) {
     userId: b?.user?.id || null,
     appointment: b.appointment || null,
     bookingStatus: b.bookingStatus || "Incomplete",
+    bookingType: b.bookingType || b._raw?.bookingType || "Booking",
+    orderId: b.orderId || b._raw?.orderId || null,
+    notes: b.notes || b._raw?.notes || null,
     medicineName: null,
     trackingId: null,
     status: null,
@@ -199,6 +205,9 @@ function normaliseOrder(o) {
     medicineName: o.medicineName || null,
     trackingId: o.trackingId || null,
     status: o.status || null,
+    futureApptAt: o.futureApptAt || o._raw?.futureApptAt || null,
+    futureApptDays: o.futureApptDays ?? o._raw?.futureApptDays ?? null,
+    futureApptTime: o.futureApptTime || o._raw?.futureApptTime || null,
     createdAt: o.createdAt || null,
     _raw: o,
   };
@@ -265,6 +274,7 @@ function pairByPatient(bookings, orders) {
       let bestIdx = -1;
       for (let i = 0; i < bs.length; i++) {
         if (usedBooking.has(i)) continue;
+        if (bs[i].bookingType === "Review") continue; // Reviews are separate follow-up rows
         if (madeAt(bs[i]) <= madeAt(o) + TOL) {
           // eligible; keep the one closest before the order
           if (!best || madeAt(bs[i]) >= madeAt(best)) {
@@ -280,7 +290,10 @@ function pairByPatient(bookings, orders) {
     // Bookings with no order yet (e.g. a fresh appointment awaiting its order)
     // stay on their own row so nothing is hidden.
     for (let i = 0; i < bs.length; i++) {
-      if (!usedBooking.has(i)) pairs.push({ booking: bs[i], order: null });
+      if (!usedBooking.has(i)) {
+        const linkedOrder = bs[i].orderId ? os.find((o) => o.id === bs[i].orderId) : null;
+        pairs.push({ booking: bs[i], order: linkedOrder || null });
+      }
     }
 
     pairs.forEach((p, i) => {
@@ -338,7 +351,7 @@ export default function MergedOcOrdersTable() {
   const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
   const [nameSearch, setNameSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL"); // ALL | appointment | order
-  const [quick, setQuick] = useState("ALL"); // ALL | today | upcoming | missed
+  const [apptWindow, setApptWindow] = useState("ALL"); // ALL | today | next3 | next7 | missed
 
   const [rows, setRows] = useState(() => rowsCache.get("||") || []);
   const [loading, setLoading] = useState(() => !rowsCache.has("||"));
@@ -377,6 +390,9 @@ export default function MergedOcOrdersTable() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null); // {_type, id}
   const [deleting, setDeleting] = useState(false);
+
+  // ----- Change future review dialog -----
+  const [selectedReviewRow, setSelectedReviewRow] = useState(null);
 
   async function fetchAll() {
     const cacheKey = `${year}|${month}|${day}`;
@@ -464,14 +480,34 @@ export default function MergedOcOrdersTable() {
     const q = nameSearch.trim().toLowerCase();
     const qDigits = q.replace(/\D/g, "");
     const londonDay = (d) => new Date(d).toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+    const addDaysYMD = (ymd, n) => {
+      const [y, m, d] = ymd.split("-").map(Number);
+      return new Date(Date.UTC(y, m - 1, d + n, 12)).toISOString().slice(0, 10);
+    };
     const today = londonDay(Date.now());
     const now = Date.now();
     return rows.filter((r) => {
-      if (typeFilter === "appointment" && !r.booking) return false;
+      if (typeFilter === "appointment" && (!r.booking || r.booking.bookingType === "Review")) return false;
       if (typeFilter === "order" && r.booking) return false;
-      if (quick === "today" && !(r.appointment && londonDay(r.appointment) === today)) return false;
-      if (quick === "upcoming" && !(r.appointment && new Date(r.appointment).getTime() > now)) return false;
-      if (quick === "missed" && r.booking?.bookingStatus !== "FailedEncounter") return false;
+      if (typeFilter === "review" && r.booking?.bookingType !== "Review") return false;
+      const rowDay = r.appointment
+        ? londonDay(r.appointment)
+        : r.createdAt
+        ? londonDay(r.createdAt)
+        : null;
+
+      if (apptWindow === "missed" && r.booking?.bookingStatus !== "FailedEncounter") return false;
+      if (apptWindow === "today" && rowDay && rowDay > today) return false;
+      if (apptWindow === "next3" && rowDay && rowDay > addDaysYMD(today, 3)) return false;
+      if (apptWindow === "next7" && rowDay && rowDay > addDaysYMD(today, 7)) return false;
+      if (
+        apptWindow === "upcoming" &&
+        !(
+          r.appointment &&
+          (londonDay(r.appointment) >= today || new Date(r.appointment).getTime() > now)
+        )
+      )
+        return false;
       if (
         callStatusFilter !== "ALL" &&
         (!r.booking || r.booking.bookingStatus !== callStatusFilter)
@@ -495,7 +531,7 @@ export default function MergedOcOrdersTable() {
       }
       return true;
     });
-  }, [rows, callStatusFilter, orderStatusFilter, nameSearch, typeFilter, quick]);
+  }, [rows, callStatusFilter, orderStatusFilter, nameSearch, typeFilter, apptWindow]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePageIndex = Math.min(pageIndex, totalPages - 1);
@@ -506,7 +542,7 @@ export default function MergedOcOrdersTable() {
 
   useEffect(() => {
     setPageIndex(0);
-  }, [callStatusFilter, orderStatusFilter, nameSearch, typeFilter, quick]);
+  }, [callStatusFilter, orderStatusFilter, nameSearch, typeFilter, apptWindow]);
 
   // ----- filter option lists -----
   const now = new Date();
@@ -598,8 +634,8 @@ export default function MergedOcOrdersTable() {
         </Badge>
       </div>
 
-      {/* SEARCH + QUICK VIEWS */}
-      <div className="flex flex-wrap items-center gap-3 mb-3">
+      {/* SEARCH & QUICK FILTERS */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <input
           value={nameSearch}
           onChange={(e) => setNameSearch(e.target.value)}
@@ -607,20 +643,23 @@ export default function MergedOcOrdersTable() {
           aria-label="Search"
           className="w-full sm:w-[340px] bg-white/40 rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
         />
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Quick views">
+
+        {/* QUICK FILTERS */}
+        <div className="flex flex-wrap items-center gap-1.5">
           {[
             ["ALL", "All"],
-            ["today", "Today's appointments"],
-            ["upcoming", "Upcoming"],
+            ["today", "Today"],
+            ["next3", "Next 3 days"],
+            ["next7", "Next 7 days"],
             ["missed", "Missed call"],
           ].map(([v, label]) => (
             <button
               key={v}
               type="button"
-              aria-pressed={quick === v}
-              onClick={() => setQuick(v)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                quick === v
+              aria-pressed={apptWindow === v}
+              onClick={() => setApptWindow(v)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition cursor-pointer ${
+                apptWindow === v
                   ? "border-[#CE8936] bg-[#CE8936] text-white"
                   : "border-gray-300 bg-white/40 text-gray-700 hover:bg-white"
               }`}
@@ -643,6 +682,7 @@ export default function MergedOcOrdersTable() {
               <SelectItem value="ALL">All</SelectItem>
               <SelectItem value="appointment">Appointment</SelectItem>
               <SelectItem value="order">Order</SelectItem>
+              <SelectItem value="review">Review</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -772,6 +812,27 @@ export default function MergedOcOrdersTable() {
           </Select>
         </div>
 
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">
+            Appointment Window
+          </label>
+          <Select
+            value={apptWindow}
+            onValueChange={setApptWindow}
+          >
+            <SelectTrigger className="w-[170px] bg-white/40">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="next3">Next 3 days</SelectItem>
+              <SelectItem value="next7">Next 7 days</SelectItem>
+              <SelectItem value="missed">Missed call</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="ml-auto">
           <Button
             variant="outline"
@@ -783,7 +844,7 @@ export default function MergedOcOrdersTable() {
               setOrderStatusFilter("ALL");
               setNameSearch("");
               setTypeFilter("ALL");
-              setQuick("ALL");
+              setApptWindow("ALL");
             }}
           >
             Clear filters
@@ -853,7 +914,23 @@ export default function MergedOcOrdersTable() {
                         <ApptDateTime appointment={r.appointment} />
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">
-                        {ocTypeLabel(r.booking?._raw?.ocRequest) || "—"}
+                        {r.booking?.bookingType === "Review" ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedReviewRow(r);
+                            }}
+                            className="inline-flex items-center gap-1 font-semibold text-[#1F7A4D] hover:underline cursor-pointer"
+                            title="Change review date/time"
+                          >
+                            <span>Review</span>
+                            <Pencil className="size-3 text-[#1F7A4D]" />
+                          </button>
+                        ) : (
+                          ocTypeLabel(r.booking?._raw?.ocRequest) ||
+                          (r.booking && !r.order ? "APPT" : "—")
+                        )}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {r.booking ? (
@@ -944,12 +1021,18 @@ export default function MergedOcOrdersTable() {
                       <TableCell>
                         <span
                           className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${
-                            r.booking
+                            r.booking?.bookingType === "Review"
+                              ? "border-[#B7E1CD] bg-[#E6F4EC] text-[#1F7A4D]"
+                              : r.booking
                               ? "border-[#EBD3B4] bg-[#FBF0E2] text-[#8A5A12]"
                               : "border-[#C9D8F0] bg-[#EEF3FB] text-[#2B5DA8]"
                           }`}
                         >
-                          {r.booking ? "Appointment" : "Order"}
+                          {r.booking?.bookingType === "Review"
+                            ? "Review"
+                            : r.booking
+                            ? "Appointment"
+                            : "Order"}
                         </span>
                       </TableCell>
                       <TableCell
@@ -958,6 +1041,7 @@ export default function MergedOcOrdersTable() {
                       >
                         <RowActions
                           row={r}
+                          onChangeReview={(row) => setSelectedReviewRow(row)}
                           onCreateOrder={(b) => {
                             setSelectedBooking(b);
                             setMedicineName("");
@@ -1003,7 +1087,9 @@ export default function MergedOcOrdersTable() {
                               label="Medicine"
                               value={
                                 r.order?.medicineName ||
-                                ocTypeLabel(r.booking?._raw?.ocRequest)
+                                (r.booking?.bookingType === "Review"
+                                  ? r.booking?.notes || "OC Review"
+                                  : ocTypeLabel(r.booking?._raw?.ocRequest))
                               }
                             />
                             <DetailField
@@ -1294,14 +1380,23 @@ export default function MergedOcOrdersTable() {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deleteTarget?._type === "review"
+                ? "Cancel future review?"
+                : "Are you absolutely sure?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this{" "}
-              {deleteTarget?._type === "booking" ? "appointment" : "order"}.
+              {deleteTarget?._type === "review"
+                ? "This action cannot be undone. This will cancel this scheduled future review appointment and clear all automated follow-up SMS reminders."
+                : `This action cannot be undone. This will permanently delete this ${
+                    deleteTarget?._type === "booking" ? "appointment" : "order"
+                  }.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>
+              {deleteTarget?._type === "review" ? "Back" : "Cancel"}
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               disabled={deleting}
@@ -1311,7 +1406,10 @@ export default function MergedOcOrdersTable() {
                 try {
                   setDeleting(true);
                   let res;
-                  if (deleteTarget._type === "booking") {
+                  if (
+                    deleteTarget._type === "booking" ||
+                    deleteTarget._type === "review"
+                  ) {
                     res = await deleteBooking({ bookingId: deleteTarget.id });
                   } else {
                     // deleteOrder reads orderId from FormData, not an object.
@@ -1320,7 +1418,11 @@ export default function MergedOcOrdersTable() {
                     res = await deleteOrder(fd);
                   }
                   if (res?.success) {
-                    toast.success(res?.message || res?.msg || "Deleted");
+                    toast.success(
+                      deleteTarget._type === "review"
+                        ? "Future review cancelled"
+                        : res?.message || res?.msg || "Deleted"
+                    );
                     setDeleteOpen(false);
                     setDeleteTarget(null);
                     await fetchAll();
@@ -1332,11 +1434,59 @@ export default function MergedOcOrdersTable() {
                 }
               }}
             >
-              {deleting ? "Deleting..." : "Delete"}
+              {deleting
+                ? deleteTarget?._type === "review"
+                  ? "Cancelling..."
+                  : "Deleting..."
+                : deleteTarget?._type === "review"
+                ? "Cancel review"
+                : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* CHANGE FUTURE REVIEW DIALOG */}
+      {selectedReviewRow ? (
+        <FutureApptDialog
+          order={{
+            id:
+              selectedReviewRow.booking?.orderId ||
+              selectedReviewRow.order?.id ||
+              selectedReviewRow.orderId,
+            futureApptAt:
+              selectedReviewRow.order?.futureApptAt ||
+              selectedReviewRow.order?._raw?.futureApptAt ||
+              selectedReviewRow.appointment ||
+              selectedReviewRow.booking?.appointment,
+            futureApptDays:
+              selectedReviewRow.order?.futureApptDays ??
+              selectedReviewRow.order?._raw?.futureApptDays,
+            futureApptTime:
+              selectedReviewRow.order?.futureApptTime ||
+              selectedReviewRow.order?._raw?.futureApptTime,
+            appointment:
+              selectedReviewRow.appointment ||
+              selectedReviewRow.booking?.appointment,
+            notes:
+              selectedReviewRow.booking?.notes ||
+              selectedReviewRow.order?.notes,
+            medicineName:
+              selectedReviewRow.order?.medicineName ||
+              selectedReviewRow.booking?.notes ||
+              "Oral Contraception",
+          }}
+          isReview={true}
+          open={!!selectedReviewRow}
+          onOpenChange={(open) => {
+            if (!open) setSelectedReviewRow(null);
+          }}
+          onSaved={async () => {
+            setSelectedReviewRow(null);
+            await fetchAll();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -1344,12 +1494,15 @@ export default function MergedOcOrdersTable() {
 /* ---------- per-row actions menu (combined booking + order) ---------- */
 function RowActions({
   row,
+  onChangeReview,
   onCreateOrder,
   onUpdateBookingStatus,
   onUpdateOrderStatus,
   onDelete,
 }) {
   const { booking, order } = row;
+  const isReview = booking?.bookingType === "Review";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -1361,50 +1514,77 @@ function RowActions({
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
-        {booking && (
+        {isReview ? (
           <>
-            {!order && (
-              <DropdownMenuItem onClick={() => onCreateOrder(booking)}>
-                Create Order
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={() => onChangeReview(row)}>
+              <Pencil className="mr-2 size-4 text-[#2B5DA8]" />
+              Change review
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onUpdateBookingStatus(booking)}>
               Update Call Status
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/admin/appointments-order/${booking.id}`}>
-                View Appointment
-              </Link>
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-700 focus:bg-red-50"
+              onClick={() =>
+                onDelete({
+                  _type: "review",
+                  id: booking.id,
+                  orderId: booking.orderId || order?.id,
+                })
+              }
+            >
+              <Trash2 className="mr-2 size-4 text-red-600" />
+              Cancel review
             </DropdownMenuItem>
           </>
-        )}
-
-        {order && (
+        ) : (
           <>
-            <DropdownMenuItem onClick={() => onUpdateOrderStatus(order)}>
-              Update Order Status
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/admin/orders/${order.id}`}>View Order</Link>
-            </DropdownMenuItem>
-          </>
-        )}
+            {booking && (
+              <>
+                {!order && (
+                  <DropdownMenuItem onClick={() => onCreateOrder(booking)}>
+                    Create Order
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => onUpdateBookingStatus(booking)}>
+                  Update Call Status
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/admin/appointments-order/${booking.id}`}>
+                    View Appointment
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
 
-        {booking && (
-          <DropdownMenuItem
-            className="text-red-600"
-            onClick={() => onDelete({ _type: "booking", id: booking.id })}
-          >
-            Delete Appointment
-          </DropdownMenuItem>
-        )}
-        {order && (
-          <DropdownMenuItem
-            className="text-red-600"
-            onClick={() => onDelete({ _type: "order", id: order.id })}
-          >
-            Delete Order
-          </DropdownMenuItem>
+            {order && (
+              <>
+                <DropdownMenuItem onClick={() => onUpdateOrderStatus(order)}>
+                  Update Order Status
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/admin/orders/${order.id}`}>View Order</Link>
+                </DropdownMenuItem>
+              </>
+            )}
+
+            {booking && (
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={() => onDelete({ _type: "booking", id: booking.id })}
+              >
+                Delete Appointment
+              </DropdownMenuItem>
+            )}
+            {order && (
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={() => onDelete({ _type: "order", id: order.id })}
+              >
+                Delete Order
+              </DropdownMenuItem>
+            )}
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

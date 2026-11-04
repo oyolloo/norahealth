@@ -4,44 +4,122 @@ import { prisma } from "@/lib/client/prisma";
 import { revalidatePath } from "next/cache";
 import { getAdminUser } from "./admin.action";
 import { londonParts } from "@/lib/smsCore";
-import { daysBetween, isDay, isTimeWindow } from "@/lib/futureAppt";
+import { daysBetween, futureApptDateTime, isDay, isTimeWindow } from "@/lib/futureAppt";
 
 // Sets, changes or clears the Future Appt of one order (CC-10). Touches only
-// the three futureAppt fields; status and everything else stay as they are.
+// the three futureAppt fields and keeps the linked review Booking in step.
 export async function saveFutureApptAction(prevState, formData) {
   const admin = await getAdminUser();
   if (!admin?.admin?.isAdmin) return { success: false, msg: "Unauthorized." };
 
   const orderId = Number(formData.get("orderId"));
   if (!Number.isInteger(orderId)) return { success: false, msg: "Order not found." };
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, userId: true } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      userId: true,
+      medicineName: true,
+      user: {
+        select: {
+          email: true,
+          account: {
+            select: {
+              firstName: true,
+              lastName: true,
+              phoneNumber: true,
+            },
+          },
+        },
+      },
+    },
+  });
   if (!order) return { success: false, msg: "Order not found." };
 
   if (formData.get("clear") === "1") {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { futureApptAt: null, futureApptDays: null, futureApptTime: null },
-    });
+    await prisma.$transaction([
+      prisma.order.update({
+        where: { id: orderId },
+        data: { futureApptAt: null, futureApptDays: null, futureApptTime: null, needsBpCheck: false },
+      }),
+      prisma.booking.deleteMany({
+        where: { orderId: orderId, bookingType: "Review" },
+      }),
+    ]);
     revalidatePath(`/admin/${order.userId}/account`);
+    revalidatePath(`/admin/${order.userId}/appointments`);
+    revalidatePath("/admin/oc-orders");
+    revalidatePath("/admin/appointments");
     return { success: true, msg: "Future appointment removed." };
   }
 
   const day = String(formData.get("day") || "");
   const time = String(formData.get("time") || "");
+  const needsBpCheck = formData.get("needsBpCheck") === "1";
   const today = londonParts(new Date()).date;
   if (!isDay(day)) return { success: false, msg: "Pick a date." };
   if (day <= today) return { success: false, msg: "The date must be after today." };
   if (!isTimeWindow(time)) return { success: false, msg: "Pick a time." };
 
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      futureApptAt: new Date(`${day}T00:00:00Z`),
-      futureApptDays: daysBetween(today, day),
-      futureApptTime: time,
-    },
+  const appointmentDate = futureApptDateTime(day, time);
+  const fullName = [order.user?.account?.firstName, order.user?.account?.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim() || "Patient";
+  const email = order.user?.email || "";
+  const phoneNumber = order.user?.account?.phoneNumber || "";
+
+  const existingReview = await prisma.booking.findFirst({
+    where: { orderId: orderId, bookingType: "Review" },
+    select: { id: true },
   });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        futureApptAt: new Date(`${day}T00:00:00Z`),
+        futureApptDays: daysBetween(today, day),
+        futureApptTime: time,
+        needsBpCheck,
+      },
+    });
+
+    if (existingReview) {
+      await tx.booking.update({
+        where: { id: existingReview.id },
+        data: {
+          appointment: appointmentDate,
+          fullName,
+          email,
+          phoneNumber,
+          notes: `Review: ${time} (${order.medicineName})`,
+        },
+      });
+    } else {
+      await tx.booking.create({
+        data: {
+          orderId: order.id,
+          bookingType: "Review",
+          bookingStatus: "Incomplete",
+          slotId: null,
+          appointment: appointmentDate,
+          fullName,
+          email,
+          phoneNumber,
+          serviceName: "Oral Contraception Review",
+          providerName: "Nora Health",
+          nhsService: "Free NHS",
+          notes: `Review: ${time} (${order.medicineName})`,
+        },
+      });
+    }
+  });
+
   revalidatePath(`/admin/${order.userId}/account`);
+  revalidatePath(`/admin/${order.userId}/appointments`);
+  revalidatePath("/admin/oc-orders");
+  revalidatePath("/admin/appointments");
   return { success: true, msg: "Future appointment saved." };
 }
 

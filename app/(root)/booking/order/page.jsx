@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 const page = async () => {
   const result = await loggedInUserDetailsAction();
   const userDetails = result?.userDetails ?? null;
-  console.log(userDetails, "confirm booking page");
+
   // 🚫 Not logged in → redirect to login with callback
   if (!userDetails) {
     redirect("/login?callbackUrl=/booking/order");

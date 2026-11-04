@@ -108,35 +108,40 @@ export default function BookingSlots() {
     return `${y}-${m}-${d}`;
   }
 
-  // bookable dates from DB
-  const [bookableDateStrings, setBookableDateStrings] = useState([]);
-  const bookableDates = useMemo(
-    () => bookableDateStrings.map((s) => parseYMD(s)),
-    [bookableDateStrings]
+  // all dates with configured slots in DB (for admin)
+  const [slotDateStrings, setSlotDateStrings] = useState([]);
+  const slotDates = useMemo(
+    () => slotDateStrings.map((s) => parseYMD(s)),
+    [slotDateStrings]
   );
 
   // helper functions to fetch data (used after deletes to refresh)
-  const fetchBookableDates = useCallback(async () => {
+  const fetchSlotDates = useCallback(async () => {
     try {
-      const res = await getBookableDates();
-      if (!res.success) {
-        toast.error(res.msg || "Failed to load available days.");
+      const res = await getBookableDates(true);
+      if (!res || !res.success) {
+        toast.error(res?.msg || "Failed to load slot days.");
         return;
       }
-      setBookableDateStrings(res.data || []);
+      setSlotDateStrings(res.data || []);
     } catch (err) {
-      console.error(err);
-      toast.error("Could not load available days.");
+      console.error("fetchSlotDates error:", err);
+      toast.error("Could not load slot days.");
     }
   }, []);
 
   useEffect(() => {
-    fetchBookableDates();
-  }, [fetchBookableDates]);
+    fetchSlotDates();
+  }, [fetchSlotDates]);
 
   const today = useMemo(() => {
     const t = new Date();
-    return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    const d = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    // If today is Sunday (closed), move to Monday
+    if (d.getDay() === 0) {
+      d.setDate(d.getDate() + 1);
+    }
+    return d;
   }, []);
 
   const [value, setValue] = useState(today);
@@ -173,50 +178,34 @@ export default function BookingSlots() {
     );
   }
 
-  const selectedDateIsBookable = useMemo(
-    () => bookableDates.some((d) => isSameDay(d, value)),
-    [bookableDates, value]
+  const selectedDateHasSlots = useMemo(
+    () => slotDates.some((d) => isSameDay(d, value)),
+    [slotDates, value]
   );
 
-  useEffect(() => {
-    if (!selectedDateIsBookable) {
-      setSelectedSlot(null);
-      setTimeSlots([]);
-    }
-  }, [selectedDateIsBookable]);
-
+  // Sunday is closed/unclickable in admin as well
   function tileDisabled({ date, view }) {
     if (view !== "month") return false;
-    if (date < today) return true;
-
-    //  Allow today even if not in bookableDates (optional)
-    if (isSameDay(date, today)) return false;
-    if (futureApptsFor(date).length) return false; // CC-16: open days with a Future Appt
-    const isBookable = bookableDates.some((d) => isSameDay(d, date));
-    if (isSameDay(date, today)) return false;
-    return !isBookable;
+    return date.getDay() === 0;
   }
 
   function onDateChange(d) {
+    if (d.getDay() === 0) return; // ignore Sunday clicks
     setValue(d);
     setSelectedSlot(null);
   }
 
-  // fetch slots from DB when date changes & is bookable
+  // fetch slots from DB whenever date changes
   const fetchSlotsForDate = useCallback(
     async (dateObj) => {
       if (!dateObj) {
         setTimeSlots([]);
         return;
       }
-      if (!bookableDates.some((d) => isSameDay(d, dateObj))) {
-        setTimeSlots([]);
-        return;
-      }
 
       setLoadingSlots(true);
       try {
-        const ymd = formatYMD(dateObj); // "2025-12-06"
+        const ymd = formatYMD(dateObj);
         const res = await getBookingSlots(ymd);
 
         if (!res.success) {
@@ -225,7 +214,6 @@ export default function BookingSlots() {
           return;
         }
 
-        // res.data expected to be array of slots: { id, startTime, endTime, label, isBooked }
         setTimeSlots(res.data || []);
       } catch (err) {
         console.error(err);
@@ -235,12 +223,12 @@ export default function BookingSlots() {
         setLoadingSlots(false);
       }
     },
-    [bookableDates]
+    []
   );
 
   useEffect(() => {
     fetchSlotsForDate(value);
-  }, [value, selectedDateIsBookable, fetchSlotsForDate]);
+  }, [value, fetchSlotsForDate]);
 
   // ---------- Confirm dialog hook ----------
   const { confirm, ConfirmDialog } = useConfirmDialog();
@@ -268,7 +256,7 @@ export default function BookingSlots() {
 
       toast.success(res.msg || "Slot deleted");
       await fetchSlotsForDate(value);
-      await fetchBookableDates();
+      await fetchSlotDates();
       setSelectedSlot(null);
     } catch (err) {
       console.error("deleteBookingSlot error", err);
@@ -309,7 +297,7 @@ export default function BookingSlots() {
 
       toast.success(res.msg || "Slots deleted for date");
 
-      await fetchBookableDates();
+      await fetchSlotDates();
       await fetchSlotsForDate(value);
       setSelectedSlot(null);
     } catch (err) {
@@ -361,7 +349,7 @@ export default function BookingSlots() {
       }
       toast.success(res.msg);
       setBulkOpen(false);
-      await fetchBookableDates();
+      await fetchSlotDates();
       await fetchSlotsForDate(value);
       setSelectedSlot(null);
     } catch (err) {
@@ -505,24 +493,25 @@ export default function BookingSlots() {
       </div>
 
       {/* Right: Time slots */}
-      <aside className='max-w-[330px] w-full bg-[#f4e7e1] p-[24px_16px] lg:p-[40px_50px]'>
+      <aside className='max-w-[360px] w-full bg-[#f4e7e1] p-[24px_16px] lg:p-[32px_36px] flex flex-col'>
         <div className='mb-4 flex items-center justify-between'>
-          <div className='text-[14px] font-medium text-[#2B3244] text-center'>
+          <div className='text-[14px] font-semibold text-[#2B3244]'>
             {value.toLocaleDateString(undefined, {
               weekday: "long",
               day: "numeric",
               month: "short",
+              year: "numeric",
             })}
           </div>
 
-          {/* Delete all button (only show when date is bookable) */}
-          {selectedDateIsBookable && (
+          {/* Delete all button (only show when slots exist) */}
+          {timeSlots.length > 0 && (
             <button
               onClick={handleDeleteSlotsForDate}
-              title='Delete all slots for this date'
-              className='ml-2 text-sm text-red-600 border px-2 py-1 rounded hover:bg-red-50'
+              title='Delete all unbooked slots for this date'
+              className='ml-2 text-xs text-red-600 border border-red-200 bg-white px-2 py-1 rounded hover:bg-red-50 font-medium'
             >
-              Delete all
+              Delete unbooked
             </button>
           )}
         </div>
@@ -548,72 +537,152 @@ export default function BookingSlots() {
           </div>
         )}
 
-        {!selectedDateIsBookable ? (
-          <div className='text-left p-4 '>
-            <div className='text-sm mb-2'>
-              Sorry, no availability on this date. Try another day.
-            </div>
-            <div className='text-sm hidden'>
-              You can also contact us by phone at{" "}
-              <a href='tel:02086797198' className='underline'>
-                020 8679 7198
-              </a>
-              .
-            </div>
-          </div>
-        ) : (
-          <div className='space-y-2 max-h-[480px] overflow-y-scroll custom-scrollbar pr-3'>
-            {loadingSlots && (
-              <div className='text-sm mb-2'>Loading time slots...</div>
-            )}
+        <div className='flex-1 space-y-2.5 max-h-[520px] overflow-y-auto custom-scrollbar pr-1'>
+          {loadingSlots && (
+            <div className='text-sm text-gray-600 py-4 text-center'>Loading slots...</div>
+          )}
 
-            {!loadingSlots && timeSlots.length === 0 && (
-              <div className='text-sm mb-2'>
-                No time slots available for this date.
+          {!loadingSlots && timeSlots.length === 0 && (
+            <div className='text-left p-4 bg-white/70 rounded-xl border border-[#DFCAB0]/60'>
+              <div className='text-sm font-medium text-gray-700 mb-1'>
+                No slots configured for this date.
               </div>
-            )}
+              <div className='text-xs text-gray-500 mb-3'>
+                Admin can add individual or bulk slots for this day.
+              </div>
+              <Link
+                href='/admin/booking-slot/create-slot'
+                className='inline-block text-xs bg-[#d67b0e] text-white px-3 py-1.5 rounded font-medium hover:bg-black transition'
+              >
+                + Add Slot
+              </Link>
+            </div>
+          )}
 
-            {timeSlots.map((slot) => {
-              const isActive = selectedSlot === slot.id;
-              return (
-                <div key={slot.id} className='relative'>
-                  <button
-                    onClick={() => setSelectedSlot(slot.id)}
-                    className={`w-full cursor-pointer text-center p-3 rounded-md border transition focus:outline-none flex items-center justify-center text-base font-medium text-black
-                      ${
-                        isActive
-                          ? "bg-[#D6866B] text-white border-[#D6866B]"
-                          : "border border-[#DFCAB0] hover:shadow-sm"
-                      }`}
-                  >
-                    <div className='text-sm'>{slot.label}</div>
-                  </button>
+          {timeSlots.map((slot) => {
+            const isActive = selectedSlot === slot.id;
+            const bookedCount = slot.booked || 0;
+            const capacity = slot.capacity || 1;
+            const isFull = slot.isFull || bookedCount >= capacity;
+            const bookings = slot.bookings || [];
 
-                  {/* delete icon; only show if slot is NOT booked */}
-                  {!slot.isBooked ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteSlot(slot.id);
-                      }}
-                      title='Delete slot'
-                      className='absolute right-2 top-1/2 -translate-y-1/2 text-red-600 p-1'
-                    >
-                      <Trash className='w-4 h-4' />
-                    </button>
-                  ) : (
-                    <div
-                      title='Cannot delete booked slot'
-                      className='absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 p-1'
-                    >
-                      <Trash className='w-4 h-4' />
-                    </div>
-                  )}
+            return (
+              <div
+                key={slot.id}
+                className='rounded-lg border border-[#DFCAB0] bg-white overflow-hidden transition shadow-xs'
+              >
+                <div
+                  onClick={() => setSelectedSlot(isActive ? null : slot.id)}
+                  className={`w-full cursor-pointer p-3 flex items-center justify-between transition ${
+                    isActive ? "bg-[#faf1ec]" : "hover:bg-[#fbf7f4]"
+                  }`}
+                >
+                  <div className='flex flex-col gap-0.5 text-left'>
+                    <span className='text-sm font-semibold text-gray-900'>
+                      {slot.label}
+                    </span>
+                    <span className='text-[11px] text-gray-500'>
+                      Click to {isActive ? "hide" : "view"} bookings
+                    </span>
+                  </div>
+
+                  <div className='flex items-center gap-2'>
+                    {isFull ? (
+                      <span className='text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold'>
+                        Booked ({bookedCount}/{capacity})
+                      </span>
+                    ) : bookedCount > 0 ? (
+                      <span className='text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold'>
+                        Booked ({bookedCount}/{capacity})
+                      </span>
+                    ) : (
+                      <span className='text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold'>
+                        Open (0/{capacity})
+                      </span>
+                    )}
+
+                    {/* delete icon; only show if slot is NOT booked */}
+                    {!slot.isBooked && bookedCount === 0 ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSlot(slot.id);
+                        }}
+                        title='Delete slot'
+                        className='text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition'
+                      >
+                        <Trash className='w-4 h-4' />
+                      </button>
+                    ) : (
+                      <div
+                        title='Cannot delete booked slot'
+                        className='text-gray-300 p-1 cursor-not-allowed'
+                      >
+                        <Trash className='w-4 h-4' />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+
+                {/* Expanded Patient Bookings List */}
+                {isActive && (
+                  <div className='border-t border-[#DFCAB0]/70 p-3 bg-[#faf9f8] text-left text-xs'>
+                    <div className='font-semibold text-gray-700 uppercase tracking-wider text-[10px] mb-2 flex items-center justify-between'>
+                      <span>Patient Bookings</span>
+                      <span className='text-gray-500 font-normal'>
+                        {bookings.length} of {capacity} booked
+                      </span>
+                    </div>
+
+                    {bookings.length === 0 ? (
+                      <div className='text-gray-500 py-1 italic'>
+                        No patient bookings for this slot yet.
+                      </div>
+                    ) : (
+                      <div className='space-y-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1'>
+                        {bookings.map((b, idx) => (
+                          <div
+                            key={b.id || idx}
+                            className='p-2 bg-white rounded border border-[#DFCAB0]/60 space-y-1'
+                          >
+                            <div className='flex items-center justify-between font-medium text-gray-900'>
+                              <span>{b.fullName || "Unnamed Patient"}</span>
+                              <span className='text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-normal'>
+                                {b.bookingStatus || "Booked"}
+                              </span>
+                            </div>
+                            {b.phoneNumber && (
+                              <div className='text-gray-600 flex items-center gap-1 text-[11px]'>
+                                <span>📞</span>
+                                <span>{b.phoneNumber}</span>
+                              </div>
+                            )}
+                            {b.email && (
+                              <div className='text-gray-600 flex items-center gap-1 text-[11px] truncate'>
+                                <span>✉️</span>
+                                <span className='truncate'>{b.email}</span>
+                              </div>
+                            )}
+                            {b.userId && (
+                              <div className='pt-1'>
+                                <Link
+                                  href={`/admin/${b.userId}/orders`}
+                                  className='text-[11px] text-[#d67b0e] hover:underline font-medium'
+                                >
+                                  View Patient Record →
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </aside>
 
       {/* Confirm Dialog (render once) */}

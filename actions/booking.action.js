@@ -192,44 +192,44 @@ export async function createBooking(formData) {
           .filter(Boolean)
           .join("\n");
 
-        const res=await createCalendarEvent({
+        const res = await createCalendarEvent({
           calendarId,
           start: appointmentStart,
           end: appointmentEnd,
           summary,
           description,
-          location: "Manor Chemist & Clinic, 341 Tamworth Ln, Mitcham CR4 1DL",
+          location: "Phone call — Nora Health will call you",
           email,
           name: fullName,
         });
         console.log("res calander", res);
-        
+
       } else {
-       console.warn("GOOGLE_CALENDAR_ID not set; skipping calendar event");
+        console.warn("GOOGLE_CALENDAR_ID not set; skipping calendar event");
       }
     } catch (calendarError) {
       console.error("Failed to create Google Calendar event:", calendarError);
       console.error("Failed to create Google Calendar event:", calendarError);
-  console.error("Error details:", calendarError.stack);
+      console.error("Error details:", calendarError.stack);
       // we don't fail the booking for this
     }
 
-   try {
-  await sendBookingConfirmationEmail({
-    to: email,
-    fullName,
-    serviceName,
-    providerName,
-    nhsService,
-    appointment: appointmentStart,
-    appointmentEnd: appointmentEnd,
-    notes,
-    phoneNumber,
-  });
-} catch (emailError) {
-  console.error("Booking confirmation email failed:", emailError);
-  // booking should NOT fail because of email
-}
+    try {
+      await sendBookingConfirmationEmail({
+        to: email,
+        fullName,
+        serviceName,
+        providerName,
+        nhsService,
+        appointment: appointmentStart,
+        appointmentEnd: appointmentEnd,
+        notes,
+        phoneNumber,
+      });
+    } catch (emailError) {
+      console.error("Booking confirmation email failed:", emailError);
+      // booking should NOT fail because of email
+    }
 
     return {
       success: true,
@@ -437,27 +437,27 @@ export async function createBookingOrder(formData) {
 
 
     // ✅ send confirmation email (non-blocking)
-try {
-  await sendOrderBookingConfirmationEmail({
-    to: email,
-    fullName,
-    firstName: user.account?.firstName,
-    phoneNumber: user.account?.phoneNumber || phoneNumber,
-    serviceName,
-    providerName,
-    nhsService,
-    ocRequest,
-    appointmentRequest,
-    appointment: appointmentStart,
-    slotStartTime: slot.startTime,
-    slotEndTime: slot.endTime,
-    createdAt: booking.createdAt || now,
-    deliveryAddress: user.account.deliveryAddress || user.account.address || "",
-    notes,
-  });
-} catch (emailError) {
-  console.error("Order booking confirmation email failed:", emailError);
-}
+    try {
+      await sendOrderBookingConfirmationEmail({
+        to: email,
+        fullName,
+        firstName: user.account?.firstName,
+        phoneNumber: user.account?.phoneNumber || phoneNumber,
+        serviceName,
+        providerName,
+        nhsService,
+        ocRequest,
+        appointmentRequest,
+        appointment: appointmentStart,
+        slotStartTime: slot.startTime,
+        slotEndTime: slot.endTime,
+        createdAt: booking.createdAt || now,
+        deliveryAddress: user.account.deliveryAddress || user.account.address || "",
+        notes,
+      });
+    } catch (emailError) {
+      console.error("Order booking confirmation email failed:", emailError);
+    }
 
     return {
       success: true,
@@ -506,7 +506,7 @@ export async function getAllBookingsAction({ year, month, day } = {}) {
 
     return true;
   });
-   // emails from bookings
+  // emails from bookings
   const emails = [
     ...new Set(
       bookings
@@ -550,7 +550,7 @@ export async function getAllBookingsAction({ year, month, day } = {}) {
 }
 export async function getAllBookingOrdersAction({ year, month, day } = {}) {
   let bookings = await prisma.booking.findMany({
-    where: { bookingType: "Order" },
+    where: { bookingType: { in: ["Order", "Booking", "Review"] } },
     orderBy: { createdAt: "desc" }, // ✅ newest first
   });
 
@@ -575,7 +575,7 @@ export async function getAllBookingOrdersAction({ year, month, day } = {}) {
   });
 
   // return { success: true, msg: "OK", bookings };
-   // emails from bookings
+  // emails from bookings
   const emails = [
     ...new Set(
       bookings
@@ -636,6 +636,20 @@ export const deleteBooking = async (formDataOrObj) => {
   if (!b) return { success: false, msg: "Booking not found" };
 
   await prisma.booking.delete({ where: { id: Number(bookingId) } });
+  if (b.bookingType === "Review" && b.orderId) {
+    try {
+      await prisma.order.update({
+        where: { id: b.orderId },
+        data: {
+          futureApptAt: null,
+          futureApptDays: null,
+          futureApptTime: null,
+        },
+      });
+    } catch (orderErr) {
+      console.warn("Failed to clear order futureAppt on review cancel:", orderErr);
+    }
+  }
 
   if (b.slotId) {
     await prisma.bookingSlot.update({
@@ -652,6 +666,7 @@ export const deleteBooking = async (formDataOrObj) => {
 
   // revalidate admin page
   revalidatePath("/admin/appointments");
+  revalidatePath("/admin/oc-orders");
 
   return { success: true, msg: "Booking deleted" };
 };
@@ -1182,6 +1197,7 @@ export async function createOrderFromBooking({
     }
 
     revalidatePath("/admin/appointments");
+  revalidatePath("/admin/oc-orders");
     return { success: true, msg: "Order created successfully" };
   } catch (err) {
     console.error(err);
@@ -1236,7 +1252,8 @@ export async function updateBookingStatus(formDataOrObj) {
       .catch((err) => console.error("statusChangedAt not saved:", err?.message));
 
     // ✅ revalidate (adjust your routes)
-    revalidatePath("/admin/appointments"); // Booking list
+    revalidatePath("/admin/appointments");
+  revalidatePath("/admin/oc-orders"); // Booking list
     revalidatePath("/admin/appointments-order"); // if you have this route
     revalidatePath(`/admin/appointments-order/${updated.id}`); // details page (optional)
 
@@ -1283,9 +1300,177 @@ export async function getPatientAppointmentsAction(userId) {
       ocRequest: true,
       bookingStatus: true,
       bookingType: true,
+      notes: true,
+      orderId: true,
+      order: {
+        select: {
+          id: true,
+          status: true,
+          trackingId: true,
+          futureApptAt: true,
+          futureApptDays: true,
+          futureApptTime: true,
+          medicineName: true,
+        },
+      },
       slot: { select: { startTime: true, endTime: true } },
     },
   });
 
   return { success: true, user, bookings };
+}
+
+export async function createAppointmentByAdmin(prevState, formData) {
+  const admin = await getAdminUser();
+  if (!admin?.admin?.isAdmin) {
+    return { success: false, msg: "Unauthorized. Admin access required." };
+  }
+
+  const userId = Number(formData.get("userId"));
+  if (!Number.isInteger(userId)) {
+    return { success: false, msg: "Patient not found." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { account: true },
+  });
+  if (!user) {
+    return { success: false, msg: "Patient not found." };
+  }
+
+  const date = formData.get("date")?.toString().trim(); // "YYYY-MM-DD"
+  const time = formData.get("time")?.toString().trim(); // "09:00"
+  if (!date || !time) {
+    return { success: false, msg: "Please select both date and time." };
+  }
+
+  const [y, m, d] = date.split("-").map(Number);
+  const dayOfWeek = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+
+  if (dayOfWeek === 0) {
+    return {
+      success: false,
+      msg: "The clinic is closed on Sundays. Please choose a different date.",
+    };
+  }
+
+  if (dayOfWeek === 6) {
+    const validSaturdaySlots = ["09:00", "10:00"];
+    if (!validSaturdaySlots.includes(time)) {
+      return {
+        success: false,
+        msg: "On Saturdays, appointments are only available between 09:00 and 11:00.",
+      };
+    }
+  }
+
+  const rawOc = formData.getAll("ocRequest").filter(Boolean);
+  const notes = formData.get("notes")?.toString().trim() || null;
+  const status = formData.get("status")?.toString().trim() || "Incomplete";
+
+  const slotDate = parseYMDtoDate(date);
+  const appointmentStart = combineDateTime(date, time);
+  const appointmentEnd = addMinutes(appointmentStart, 60);
+
+  const slot = await prisma.bookingSlot.findFirst({
+    where: {
+      slotDate,
+      startTime: time,
+    },
+  });
+
+  if (slot) {
+    const bookedCount = await prisma.booking.count({
+      where: { slotId: slot.id },
+    });
+    const capacity = slot.maxCapacity ?? 1;
+    if (bookedCount >= capacity || slot.isBooked) {
+      return {
+        success: false,
+        msg: "This time slot is already fully booked. Please choose an available slot.",
+      };
+    }
+  } else {
+    const directConflict = await prisma.booking.findFirst({
+      where: { appointment: appointmentStart },
+    });
+    if (directConflict) {
+      return {
+        success: false,
+        msg: "An appointment is already scheduled at this time. Please choose another slot.",
+      };
+    }
+  }
+
+  const fullName =
+    `${user.account?.firstName || ""} ${user.account?.lastName || ""}`.trim() ||
+    user.email;
+  const phoneNumber = user.account?.phoneNumber || "";
+
+  try {
+    await prisma.booking.create({
+      data: {
+        fullName,
+        email: user.email,
+        phoneNumber,
+        notes,
+        ocRequest: rawOc,
+        serviceName: "Oral Contraception",
+        providerName: "Manor Chemist",
+        nhsService: "NHS Service",
+        appointment: appointmentStart,
+        bookingType: "Booking",
+        bookingStatus: status,
+        slotId: slot?.id || null,
+      },
+    });
+
+    if (slot) {
+      const updatedCount = await prisma.booking.count({
+        where: { slotId: slot.id },
+      });
+      const capacity = slot.maxCapacity ?? 1;
+      if (updatedCount >= capacity && !slot.isBooked) {
+        await prisma.bookingSlot.update({
+          where: { id: slot.id },
+          data: { isBooked: true },
+        });
+      }
+    }
+
+    try {
+      const calendarId = process.env.GOOGLE_CALENDAR_ID;
+      if (calendarId) {
+        await createCalendarEvent({
+          calendarId,
+          start: appointmentStart,
+          end: appointmentEnd,
+          summary: `Oral Contraception - ${fullName}`,
+          description: [
+            "Provider: Manor Chemist",
+            "NHS Service: NHS Service",
+            `Phone: ${phoneNumber}`,
+            notes ? `Notes: ${notes}` : null,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          location: "Phone call — Nora Health will call you",
+          email: user.email,
+          name: fullName,
+        });
+      }
+    } catch (calErr) {
+      console.warn("Google calendar event creation skipped:", calErr);
+    }
+
+    revalidatePath("/booking");
+    revalidatePath("/admin/booking-slots");
+    revalidatePath(`/admin/${userId}/account`);
+    revalidatePath(`/admin/${userId}/appointments`);
+    return { success: true, msg: "Appointment created successfully." };
+  } catch (err) {
+    console.error("createAppointmentByAdmin error:", err);
+    return { success: false, msg: "Failed to create appointment." };
+  }
 }
