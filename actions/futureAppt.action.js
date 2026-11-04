@@ -101,6 +101,7 @@ export async function saveFutureApptAction(prevState, formData) {
         data: {
           orderId: order.id,
           bookingType: "Review",
+          ocRequest: [], // required column; a review has no OC request
           bookingStatus: "Incomplete",
           slotId: null,
           appointment: appointmentDate,
