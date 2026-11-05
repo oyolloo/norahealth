@@ -18,7 +18,9 @@ const Toaster = ({
   return (
     <Sonner
       theme={theme}
-      className="toaster group"
+      // On phones sonner sets left: 16px plus width: 100%, which pushes the
+      // toast 16px past the right edge. Pin both sides instead.
+      className="toaster group max-[600px]:!w-auto max-[600px]:!left-4 max-[600px]:!right-4"
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,
