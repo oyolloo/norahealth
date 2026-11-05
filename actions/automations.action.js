@@ -89,7 +89,7 @@ export async function saveAutomationAction(_prev, formData) {
   if (!text) return { success: false, msg: "The SMS text can't be empty." };
   if (text.length > 900) return { success: false, msg: "The SMS text is too long (900 characters max)." };
   // Recallo24 refuses texts over 6 SMS parts. Measure with a long sample name.
-  if (segmentsOf(text.replace(/\{\s*link\s*\}/gi, "norahealth.co.uk/bp/XXXXXXXX").replace(/\{[^}]*\}/g, "Christopher-James")) > MAX_SEGMENTS)
+  if (segmentsOf(text.replace(/\{\s*link\s*\}/gi, "norahealth.co.uk/bp/health").replace(/\{[^}]*\}/g, "Christopher-James")) > MAX_SEGMENTS)
     return {
       success: false,
       msg: `This text is too long: over ${MAX_SEGMENTS} SMS parts. Shorten it, or remove special symbols such as • or emoji, which make each part much shorter.`,
