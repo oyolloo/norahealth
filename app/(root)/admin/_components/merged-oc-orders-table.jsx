@@ -934,7 +934,9 @@ export default function MergedOcOrdersTable() {
                         )}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        {r.order ? (
+                        {/* A review row is a follow-up call, not an order: its order's
+                            status is shown and changed on the order's own row. */}
+                        {r.order && r.booking?.bookingType !== "Review" ? (
                           <div className="flex flex-col gap-1">
                             <Select
                               value={r.order.status || "clinicalreview"}

@@ -133,6 +133,8 @@ export function AppointmentsTable({
   const bookingOrderMap = useMemo(() => {
     const map = new Map();
     for (const b of bookings) {
+      // Reviews don't take the order: it belongs to the appointment it came from.
+      if (b.bookingType === "Review") continue;
       if (b.order?.id) {
         map.set(b.id, b.order);
       } else if (b.orderId) {
@@ -413,7 +415,7 @@ export function AppointmentsTable({
                     )}
                     {columnVisibility.orderStatus && (
                       <TableCell>
-                        {bookingOrderMap.get(b.id) ? (
+                        {bookingOrderMap.get(b.id) && b.bookingType !== "Review" ? (
                           <OrderStatusInline order={bookingOrderMap.get(b.id)} />
                         ) : (
                           "—"
