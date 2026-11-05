@@ -45,7 +45,7 @@ import {
 import { CREDITS_PER_SEGMENT, MAX_SEGMENTS, renderText, segmentsOf, smsLimit, toE164Uk } from "@/lib/smsCore";
 
 const initial = { success: null, msg: "" };
-const SAMPLE = { first_name: "Emma", time_frame: "3pm and 4pm", appt_time: "3pm-4pm", link: "norahealth.co.uk/bp/k8J9mX2p" };
+const SAMPLE = { first_name: "Emma", time_frame: "3pm and 4pm", appt_time: "3pm-4pm", link: "norahealth.co.uk/bp/health" };
 const RECALLO24_DASHBOARD = "https://recallo24.oyolloo.com/dashboard";
 const RECALLO24_BILLING = "https://recallo24.oyolloo.com/dashboard/billing";
 // Below this many credits the page asks the admin to top up.
