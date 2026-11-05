@@ -55,7 +55,7 @@ const AdminNavigation = ({ userId }) => {
         <ButtonGroup>
           <ButtonGroup className='hidden sm:flex'>
             <Button variant='outline' size='icon' aria-label='Go Back' asChild>
-              <Link href='/admin'>
+              <Link href='/admin/oc-orders'>
                 <ArrowLeftIcon />
               </Link>
             </Button>
