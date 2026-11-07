@@ -144,6 +144,7 @@ export async function createBooking(formData) {
         email,
         phoneNumber,
         notes,
+        ocRequest: [], // required column; the booking-only page has no OC request
         bookingType,
         serviceName,
         providerName,
