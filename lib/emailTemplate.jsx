@@ -7,6 +7,7 @@ import {
   SUBJECTS,
   longCallDate,
   orderStatusEmailHtml,
+  reviewReminderEmailHtml,
   welcomeEmailHtml,
 } from "./emailHtml";
 
@@ -603,5 +604,16 @@ export const orderFromBookingEmailTemplate = ({
   });
 };
 
-
-
+// CC-29: review reminder 7 days before the Future Appt. Throws on failure so
+// the runner can log it.
+export async function sendReviewReminderEmail({ to, subject, text, dateText, timeFrame }) {
+  const res = await resend.emails.send({
+    from: "Nora Health <contact@norahealth.co.uk>",
+    to,
+    replyTo: "contact@norahealth.co.uk",
+    subject,
+    html: reviewReminderEmailHtml({ text, dateText, timeFrame }),
+  });
+  if (res?.error) throw new Error(res.error.message || "Email send failed");
+  return res?.data?.id || null;
+}

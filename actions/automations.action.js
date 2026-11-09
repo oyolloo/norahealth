@@ -5,7 +5,7 @@ import { prisma } from "@/lib/client/prisma";
 import { getAdminUser } from "./admin.action";
 import { getSmsSettings, setSmsSettings, SMS_KEYS } from "@/lib/smsSettings";
 import { getBalance } from "@/lib/recallo24";
-import { sendOne } from "@/lib/smsRunner";
+import { sendEmailOne, sendOne } from "@/lib/smsRunner";
 import { automationById, firstName, MAX_SEGMENTS, segmentsOf, toE164Uk } from "@/lib/smsCore";
 
 const PATH = "/admin/automations";
@@ -89,7 +89,8 @@ export async function saveAutomationAction(_prev, formData) {
   if (!text) return { success: false, msg: "The SMS text can't be empty." };
   if (text.length > 900) return { success: false, msg: "The SMS text is too long (900 characters max)." };
   // Recallo24 refuses texts over 6 SMS parts. Measure with a long sample name.
-  if (segmentsOf(text.replace(/\{\s*link\s*\}/gi, "norahealth.co.uk/bp/health").replace(/\{[^}]*\}/g, "Christopher-James")) > MAX_SEGMENTS)
+  // (The 4c email is not an SMS, so no part limit.)
+  if (a.channel !== "email" && segmentsOf(text.replace(/\{\s*link\s*\}/gi, "norahealth.co.uk/bp/health").replace(/\{[^}]*\}/g, "Christopher-James")) > MAX_SEGMENTS)
     return {
       success: false,
       msg: `This text is too long: over ${MAX_SEGMENTS} SMS parts. Shorten it, or remove special symbols such as • or emoji, which make each part much shorter.`,
@@ -257,4 +258,33 @@ export async function removeOptOutAction(formData) {
   await prisma.smsOptOut.deleteMany({ where: { phone } });
   revalidatePath(PATH);
   return { success: true };
+}
+
+// CC-29: send the review reminder email with sample details to one address,
+// so staff can see it before switching it on. Logged like the SMS tests.
+export async function sendReviewEmailTestAction(_prev, formData) {
+  const admin = await getAdminUser();
+  if (!admin) return DENIED;
+  if (!(await tablesReady())) return NOT_READY;
+  const email = String(formData.get("email") || "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { success: false, msg: "Enter a valid email address." };
+  const s = await getSmsSettings();
+  const a = s.automations.find((x) => x.id === "4c");
+  if (!a) return { success: false, msg: "Unknown automation." };
+  const dateText = "Monday 1st February";
+  const r = await sendEmailOne({
+    key: `test:4c:${randomUUID()}`,
+    automation: "test-4c",
+    email,
+    subject: a.subject,
+    text: a.text,
+    vars: { first_name: "Test", date: dateText, time_frame: "10am and 11am" },
+    dateText,
+    timeFrame: "10am and 11am",
+    sentBy: admin.admin?.email || "admin",
+  });
+  revalidatePath(PATH);
+  return r.status === "sent"
+    ? { success: true, msg: `Test email sent to ${email}.` }
+    : { success: false, msg: `Not sent: ${r.error || r.status}` };
 }
