@@ -4,7 +4,7 @@ import { prisma } from "@/lib/client/prisma";
 import { revalidatePath } from "next/cache";
 import { getAdminUser } from "./admin.action";
 import { londonParts } from "@/lib/smsCore";
-import { daysBetween, futureApptDateTime, isDay, isTimeWindow } from "@/lib/futureAppt";
+import { TIME_WINDOWS, daysBetween, futureApptDateTime, isDay, isTimeWindow, parseTimeWindowHour, reviewsByHour, slotHour } from "@/lib/futureAppt";
 
 // Sets, changes or clears the Future Appt of one order (CC-10). Touches only
 // the three futureAppt fields and keeps the linked review Booking in step.
@@ -154,4 +154,36 @@ export async function getFutureApptsAction() {
       o.user?.email ||
       `Order #${o.id}`,
   }));
+}
+
+// CC-27: how full each review hour is on one day, for the time picker.
+// Counts slot bookings plus other reviews on that day (the order being edited
+// is left out, so its own review never blocks itself). Read only.
+// Returns [{ value, hour, capacity (null = no slot that hour), booked }].
+export async function getDayLoadAction(day, excludeOrderId) {
+  const admin = await getAdminUser();
+  if (!admin?.admin?.isAdmin || !isDay(day)) return [];
+  const date = new Date(`${day}T00:00:00Z`);
+  const skip = Number(excludeOrderId) || 0;
+  const [slots, reviews] = await Promise.all([
+    prisma.bookingSlot.findMany({
+      where: { slotDate: date },
+      select: { startTime: true, maxCapacity: true, _count: { select: { bookings: true } } },
+    }),
+    prisma.order.findMany({
+      where: { futureApptAt: date, ...(skip ? { id: { not: skip } } : {}) },
+      select: { futureApptTime: true },
+    }),
+  ]);
+  const byHour = reviewsByHour(reviews.map((r) => ({ time: r.futureApptTime })));
+  return TIME_WINDOWS.map((w) => {
+    const hour = parseTimeWindowHour(w.value);
+    const slot = slots.find((s) => slotHour(s.startTime) === hour);
+    return {
+      value: w.value,
+      hour,
+      capacity: slot ? slot.maxCapacity ?? 1 : null,
+      booked: (slot?._count.bookings || 0) + (byHour[hour] || 0),
+    };
+  });
 }

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAdmin } from "@/lib/adminContext";
 import { getFutureApptsAction } from "@/actions/futureAppt.action";
+import { reviewsByHour, slotHour } from "@/lib/futureAppt";
 
 /**
  * Reusable confirm dialog hook (uses shadcn AlertDialog)
@@ -561,7 +562,9 @@ export default function BookingSlots() {
 
           {timeSlots.map((slot) => {
             const isActive = selectedSlot === slot.id;
-            const bookedCount = slot.booked || 0;
+            // CC-27: reviews at this hour count toward the slot's capacity too.
+            const reviewsHere = reviewsByHour(futureApptsFor(value))[slotHour(slot.startTime)] || 0;
+            const bookedCount = (slot.booked || 0) + reviewsHere;
             const capacity = slot.capacity || 1;
             const isFull = slot.isFull || bookedCount >= capacity;
             const bookings = slot.bookings || [];
@@ -602,7 +605,7 @@ export default function BookingSlots() {
                     )}
 
                     {/* delete icon; only show if slot is NOT booked */}
-                    {!slot.isBooked && bookedCount === 0 ? (
+                    {!slot.isBooked && (slot.booked || 0) === 0 ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
