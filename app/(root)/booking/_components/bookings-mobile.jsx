@@ -7,10 +7,12 @@ import { ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 import { useBooking } from "@/lib/BookingContext";
 import AppointmentPicker from "./appointment-picker";
+import { useBookingSubmit, BookingConfirmedPopup } from "./booking-submit";
 
 export default function BookingsMobile() {
   const router = useRouter();
   const { bookingData, setBookingData } = useBooking();
+  const { submitting, confirmed, submit } = useBookingSubmit();
 
   const [form, setForm] = useState({
     fullName: bookingData?.fullName || "",
@@ -35,7 +37,7 @@ export default function BookingsMobile() {
     setForm((p) => ({ ...p, [name]: value }));
   }
 
-  const canConfirm = Boolean(slot?.date && slot?.time);
+  const canConfirm = Boolean(slot?.date && slot?.time) && !submitting;
 
   function confirm() {
     if (!slot?.date || !slot?.time) {
@@ -53,11 +55,13 @@ export default function BookingsMobile() {
       bookingendtime: slot.endTime,
       ...form,
     });
-    router.push("/booking/confirm");
+    // Book straight away (one step) instead of opening /booking/confirm.
+    submit(form, slot);
   }
 
   return (
     <div className="flex flex-col gap-4">
+      <BookingConfirmedPopup booking={confirmed} />
       <h2 className="text-[20px] leading-[27px] font-semibold text-[#0D060C] tracking-[-0.3px]">
         Book a free telephone appointment
       </h2>
@@ -128,7 +132,7 @@ export default function BookingsMobile() {
         ].join(" ")}
       >
         <span className="flex items-center justify-center gap-1.5">
-          Confirm Appointment
+          {submitting ? "Confirming\u2026" : "Confirm Appointment"}
           <ArrowUpRight
             className={[
               "size-5 transition duration-300",

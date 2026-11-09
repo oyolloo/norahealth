@@ -8,10 +8,12 @@ import { toast } from "sonner";
 import { useBooking } from "@/lib/BookingContext";
 import AppointmentPicker from "./appointment-picker";
 import BookingsMobile from "./bookings-mobile";
+import { useBookingSubmit, BookingConfirmedPopup } from "./booking-submit";
 
 function BookingsDesktop() {
   const router = useRouter();
   const { bookingData, setBookingData } = useBooking();
+  const { submitting, confirmed, submit } = useBookingSubmit();
 
   const [form, setForm] = useState({
     fullName: bookingData?.fullName || "",
@@ -36,7 +38,7 @@ function BookingsDesktop() {
     setForm((p) => ({ ...p, [name]: value }));
   }
 
-  const canConfirm = Boolean(slot?.date && slot?.time);
+  const canConfirm = Boolean(slot?.date && slot?.time) && !submitting;
 
   function confirm() {
     if (!slot?.date || !slot?.time) {
@@ -54,11 +56,13 @@ function BookingsDesktop() {
       bookingendtime: slot.endTime,
       ...form,
     });
-    router.push("/booking/confirm");
+    // Book straight away (one step) instead of opening /booking/confirm.
+    submit(form, slot);
   }
 
   return (
     <div className='hidden md:block'>
+      <BookingConfirmedPopup booking={confirmed} />
       <h2 className='text-center text-[#1F2122] text-[18px] md:text-[24px] font-semibold max-w-[680px] mx-auto mb-[40px]'>
         Book a free telephone appointment in just a few clicks to discuss your
         contraceptive needs.
@@ -182,7 +186,7 @@ function BookingsDesktop() {
             ].join(' ')}
           >
             <span className='flex items-center justify-center gap-1.5'>
-              Confirm Appointment
+              {submitting ? "Confirming\u2026" : "Confirm Appointment"}
               <ArrowUpRight
                 className={[
                   'size-5 transition duration-300',
