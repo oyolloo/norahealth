@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { saveFutureApptAction } from "@/actions/futureAppt.action";
+import { getDayLoadAction, saveFutureApptAction } from "@/actions/futureAppt.action";
 import { londonParts } from "@/lib/smsCore";
 import {
   OFF_WEEKDAYS,
@@ -27,6 +27,7 @@ import {
   dayOf,
   daysBetween,
   futureApptState,
+  firstFreeWindow,
   offDayWarning,
 } from "@/lib/futureAppt";
 
@@ -126,6 +127,24 @@ function DaysBadge({ days }) {
   );
 }
 
+// CC-27: same badge as the Booking Slots page. Slot bookings + reviews / capacity.
+function LoadBadge({ w }) {
+  if (!w) return null;
+  if (w.capacity == null)
+    return <span className='ml-auto text-[11px] text-muted-foreground'>No slot</span>;
+  const full = w.booked >= w.capacity;
+  const cls = full
+    ? "bg-red-100 text-red-700"
+    : w.booked > 0
+      ? "bg-amber-100 text-amber-700"
+      : "bg-emerald-100 text-emerald-700";
+  return (
+    <span className={`ml-auto text-[11px] px-2 py-0.5 rounded-full font-semibold ${cls}`}>
+      {w.booked > 0 ? "Booked" : "Open"} ({w.booked}/{w.capacity})
+    </span>
+  );
+}
+
 export function FutureApptDialog({ order, open, onOpenChange, onSaved, isReview }) {
   const today = londonParts(new Date()).date;
   const savedDay = dayOf(order?.futureApptAt) || (order?.appointment ? dayOf(order.appointment) : null);
@@ -138,6 +157,41 @@ export function FutureApptDialog({ order, open, onOpenChange, onSaved, isReview 
   const [time, setTime] = React.useState(initialTime);
   const [needsBpCheck, setNeedsBpCheck] = React.useState(Boolean(order?.needsBpCheck));
   const day = mode === "custom" ? customDay : addDays(today, Number(mode));
+
+  // CC-27 / CC-25: load of each hour on the chosen day, and the default time.
+  // The time fills in with the first free hour until the admin picks one;
+  // an existing review keeps its saved time on its saved day.
+  const orderId = order?.id || order?.orderId;
+  const [load, setLoad] = React.useState(null);
+  const picked = React.useRef(false);
+  const pickTime = (v) => {
+    picked.current = true;
+    setTime(v);
+  };
+  React.useEffect(() => {
+    if (!day) return;
+    let live = true;
+    setLoad(null);
+    getDayLoadAction(day, orderId)
+      .then((rows) => {
+        if (!live) return;
+        const l = Array.isArray(rows) ? rows : [];
+        setLoad(l);
+        if (picked.current) return;
+        if (initialTime && day === savedDay) return setTime(initialTime);
+        setTime(firstFreeWindow(l, { isToday: day === today, nowHour: londonParts(new Date()).hour }));
+      })
+      .catch(() => live && setLoad([]));
+    return () => {
+      live = false;
+    };
+  }, [day]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadOf = (v) => load?.find((x) => x.value === v);
+  const isFullWindow = (v) => {
+    const w = loadOf(v);
+    return Boolean(w && w.capacity != null && w.booked >= w.capacity);
+  };
+  const noFreeTime = load && load.length > 0 && !time && !firstFreeWindow(load, { isToday: day === today, nowHour: londonParts(new Date()).hour });
   const warning = offDayWarning(day, time);
   // Saving on an off day needs a deliberate yes, asked again for each new day/time.
   const [okOffDay, setOkOffDay] = React.useState(false);
@@ -185,18 +239,30 @@ export function FutureApptDialog({ order, open, onOpenChange, onSaved, isReview 
           </div>
           <div className='space-y-2'>
             <Label>Time</Label>
-            <Select value={time} onValueChange={setTime}>
+            <Select value={time} onValueChange={pickTime}>
               <SelectTrigger className='w-full'>
                 <SelectValue placeholder='Pick a time' />
               </SelectTrigger>
               <SelectContent>
                 {TIME_WINDOWS.map((w) => (
-                  <SelectItem key={w.value} value={w.value}>
-                    {w.from} to {w.to}
+                  <SelectItem
+                    key={w.value}
+                    value={w.value}
+                    disabled={isFullWindow(w.value)}
+                    className='[&>span:last-child]:flex [&>span:last-child]:w-full [&>span:last-child]:items-center [&>span:last-child]:gap-3'
+                  >
+                    <span>
+                      {w.from} to {w.to}
+                    </span>
+                    <LoadBadge w={loadOf(w.value)} />
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {noFreeTime ? <p className='text-sm text-muted-foreground'>No free time on this day.</p> : null}
+            {time && isFullWindow(time) ? (
+              <p className='text-sm text-red-700'>This hour is full (6/6). Pick another time.</p>
+            ) : null}
           </div>
           <div className='rounded-md border border-[#E2E8F0] bg-[#F8FAFC] p-3'>
             <label className='flex items-center gap-2 cursor-pointer font-medium text-sm text-[#0D060C]'>
@@ -244,7 +310,7 @@ export function FutureApptDialog({ order, open, onOpenChange, onSaved, isReview 
             ) : (
               <span />
             )}
-            <Button type='submit' name='save' value='1' disabled={saving || !day || !time || (warning && !okOffDay)}>
+            <Button type='submit' name='save' value='1' disabled={saving || !day || !time || isFullWindow(time) || (warning && !okOffDay)}>
               {saving ? "Saving..." : isEditing ? "Save changes" : "Save"}
             </Button>
           </DialogFooter>
