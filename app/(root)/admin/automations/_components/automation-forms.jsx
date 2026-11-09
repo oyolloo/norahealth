@@ -18,6 +18,7 @@ import {
   ExternalLink,
   TriangleAlert,
   Heart,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ import {
   saveConnectionAction,
   searchPatientsAction,
   sendMissedCallAction,
+  sendReviewEmailTestAction,
   sendTestAction,
 } from "@/actions/automations.action";
 import { CREDITS_PER_SEGMENT, MAX_SEGMENTS, renderText, segmentsOf, smsLimit, toE164Uk } from "@/lib/smsCore";
@@ -276,7 +278,7 @@ export function ConnectionPanel({ enabled, hasKey, keyHint, ready, balance, cron
 const GROUPS = [
   { title: "After sign-up", hint: "Only for people who sign up after the message is switched on.", ids: ["1a", "1b"] },
   { title: "Appointments", hint: "Uses the booking and order slots.", ids: ["2", "3"] },
-  { title: "OC reviews", hint: "Set from the Future Appt column on a patient's orders.", ids: ["4a", "4b", "4b_bp"] },
+  { title: "OC reviews", hint: "Set from the Future Appt column on a patient's orders.", ids: ["4a", "4b", "4b_bp", "4c"] },
   { title: "Sent by your team", hint: "Only goes out when someone presses send.", ids: ["5"] },
 ];
 
@@ -288,6 +290,7 @@ const ICONS = {
   "4a": CalendarClock,
   "4b": RefreshCcw,
   "4b_bp": Heart,
+  "4c": Mail,
   5: PhoneMissed,
 };
 
@@ -299,6 +302,7 @@ function whenText(a) {
   const h = hourText(a.hour);
   if (a.id === "4b" || a.id === "4b_bp") return `${h}, 28 days before the Future Appt Date`;
   if (a.id === "4a") return `${h} on the Future Appt Date`;
+  if (a.id === "4c") return `Email, ${h}, 7 days before the Future Appt Date`;
   if (a.id === "3") return `${h} on the day it is marked Failed Encounter`;
   return `${h} on the day of the appointment`;
 }
@@ -328,6 +332,7 @@ function MessageRow({ a, ready, smsOn }) {
   }, [state, a.enabled]);
 
   const Icon = ICONS[a.id] || Send;
+  const isEmail = a.channel === "email";
   // Count the text as sent: {link} and names filled in, not the raw {tags}.
   const parts = segmentsOf(renderText(text, SAMPLE));
   const savedParts = segmentsOf(renderText(a.text, SAMPLE));
@@ -379,12 +384,18 @@ function MessageRow({ a, ready, smsOn }) {
         )}
       </div>
 
-      <SmsBubble text={a.text} />
+      {isEmail ? <EmailPreview a={a} /> : <SmsBubble text={a.text} />}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-[#6B6660] min-w-0">
-          {a.ready ? a.conditions : a.waiting} · {savedParts} SMS part{savedParts === 1 ? "" : "s"} ({savedParts * CREDITS_PER_SEGMENT} credits) each
-          {on && !smsOn ? " · waiting for the main switch" : ""}
+          {isEmail ? (
+            <>{a.conditions} · Email, no SMS credits</>
+          ) : (
+            <>
+              {a.ready ? a.conditions : a.waiting} · {savedParts} SMS part{savedParts === 1 ? "" : "s"} ({savedParts * CREDITS_PER_SEGMENT} credits) each
+              {on && !smsOn ? " · waiting for the main switch" : ""}
+            </>
+          )}
         </p>
         <Button
           variant="ghost"
@@ -417,6 +428,12 @@ function MessageRow({ a, ready, smsOn }) {
                 onChange={(e) => setText(e.target.value)}
                 className="w-full resize-y rounded-md border border-input bg-white px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               />
+              {isEmail ? (
+                <p className="text-xs text-[#6B6660]">
+                  Subject: {a.subject}. You can use {"{first_name}"}, {"{date}"}, {"{time_frame}"}. A blank line starts a
+                  new paragraph.
+                </p>
+              ) : (
               <p className="text-xs text-[#6B6660]">
                 {text.length} characters, {parts} SMS part{parts === 1 ? "" : "s"} ({parts * CREDITS_PER_SEGMENT} credits) per patient. You can use{" "}
                 {"{first_name}"}
@@ -424,7 +441,8 @@ function MessageRow({ a, ready, smsOn }) {
                 {a.id === "3" ? ", {appt_time}" : ""}
                 {a.id === "4b_bp" ? ", {link}" : ""}.
               </p>
-              {parts > MAX_SEGMENTS && (
+              )}
+              {!isEmail && parts > MAX_SEGMENTS && (
                 <p className="text-xs text-[#9B2C22]">
                   Too long to send: the limit is {MAX_SEGMENTS} SMS parts. Special symbols such as • or emoji make each
                   part much shorter.
@@ -470,6 +488,27 @@ function MessageRow({ a, ready, smsOn }) {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// CC-29: email preview (sample details) and a "send test" box for the 4c email.
+const EMAIL_SAMPLE = { first_name: "Emma", date: "Monday 1st February", time_frame: "10am and 11am" };
+function EmailPreview({ a }) {
+  const [state, action, sending] = useActionState(useOnce(sendReviewEmailTestAction), initial);
+  useToastResult(state);
+  return (
+    <div className="rounded-xl bg-[#F4F1EE] p-3 flex flex-col gap-2">
+      <div className="rounded-lg bg-white px-3.5 py-2.5 text-sm leading-relaxed text-[#3A3D42] shadow-xs">
+        <p className="text-xs text-[#6B6660]">Subject: {a.subject}</p>
+        <p className="mt-1 whitespace-pre-line">{renderText(a.text, EMAIL_SAMPLE)}</p>
+      </div>
+      <form action={action} className="flex flex-wrap items-center gap-2">
+        <Input name="email" type="email" required placeholder="Send a test to (email)" aria-label="Test email address" className="h-8 flex-1 min-w-[180px] bg-white text-sm" />
+        <Button type="submit" size="sm" variant="outline" disabled={sending}>
+          <Send /> {sending ? "Sending..." : "Send test"}
+        </Button>
+      </form>
     </div>
   );
 }
@@ -678,7 +717,7 @@ export function TestSmsForm({ automations, ready }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="custom">Custom</SelectItem>
-            {automations.map((a) => (
+            {automations.filter((a) => a.channel !== "email").map((a) => (
               <SelectItem key={a.id} value={a.id}>
                 {a.title}
               </SelectItem>
