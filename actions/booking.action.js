@@ -9,6 +9,7 @@ import { statusEmailSubject } from "@/lib/emailHtml";
 import { createRoyalMailOrder, isRoyalMailConfigured } from "@/lib/royalMail";
 import { Resend } from "resend";
 import { getAdminUser } from "./admin.action";
+import { slotHour, windowForHour } from "@/lib/futureAppt";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -37,7 +38,7 @@ function addMinutes(date, minutes) {
 async function bookSlotWithCapacity(slotId, bookingData) {
   return prisma.$transaction(async (tx) => {
     const locked = await tx.$queryRaw`
-      SELECT id, "maxCapacity"
+      SELECT id, "maxCapacity", "slotDate", "startTime"
       FROM "BookingSlot"
       WHERE id = ${slotId}
       FOR UPDATE
@@ -46,7 +47,13 @@ async function bookSlotWithCapacity(slotId, bookingData) {
 
     const capacity = locked[0].maxCapacity ?? 1;
 
-    const current = await tx.booking.count({ where: { slotId } });
+    const slotBookings = await tx.booking.count({ where: { slotId } });
+    // CC-28: Future Appt reviews at this hour use the same 6 places.
+    const win = windowForHour(slotHour(locked[0].startTime));
+    const reviews = win
+      ? await tx.order.count({ where: { futureApptAt: locked[0].slotDate, futureApptTime: win } })
+      : 0;
+    const current = slotBookings + reviews;
     if (current >= capacity) throw new Error("SLOT_FULL");
 
     const created = await tx.booking.create({

@@ -396,12 +396,27 @@ export async function getBookingSlots(formDataOrDate) {
       },
     });
 
+    // CC-28: Future Appt reviews on this day share the hour's places.
+    const reviewRows = await prisma.order.findMany({
+      where: { futureApptAt: slotDate, futureApptTime: { not: null } },
+      select: {
+        id: true,
+        userId: true,
+        futureApptTime: true,
+        medicineName: true,
+        user: { select: { email: true, account: { select: { firstName: true, lastName: true, phoneNumber: true } } } },
+      },
+    });
+
     // capacity-aware: a slot is full once booked count reaches capacity.
     // Full slots are returned too (not hidden) so the picker can show them
     // line-through + disabled. (maxCapacity null = legacy slot -> capacity 1)
     const slots = rows.map((row) => {
       const capacity = row.maxCapacity ?? 1;
-      const booked = row._count.bookings;
+      const win = windowForHour(slotHour(row.startTime));
+      const hourReviews = win ? reviewRows.filter((r) => r.futureApptTime === win) : [];
+      const slotBooked = row._count.bookings;
+      const booked = slotBooked + hourReviews.length;
       return {
         id: row.id,
         label: `${row.startTime} - ${row.endTime}`,
@@ -413,7 +428,19 @@ export async function getBookingSlots(formDataOrDate) {
         remaining: Math.max(0, capacity - booked),
         isFull: booked >= capacity,
         isBooked: row.isBooked || booked >= capacity,
+        slotBooked,
+        reviewCount: hourReviews.length,
         bookings: isAdmin ? row.bookings || [] : [],
+        reviews: isAdmin
+          ? hourReviews.map((r) => ({
+              orderId: r.id,
+              userId: r.userId,
+              fullName: [r.user?.account?.firstName, r.user?.account?.lastName].filter(Boolean).join(" ") || r.user?.email || `Order #${r.id}`,
+              phoneNumber: r.user?.account?.phoneNumber || null,
+              email: r.user?.email || null,
+              medicine: r.medicineName || null,
+            }))
+          : [],
       };
     });
 

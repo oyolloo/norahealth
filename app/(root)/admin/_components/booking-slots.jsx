@@ -564,7 +564,9 @@ export default function BookingSlots() {
             const isActive = selectedSlot === slot.id;
             // CC-27: reviews at this hour count toward the slot's capacity too.
             const reviewsHere = reviewsByHour(futureApptsFor(value))[slotHour(slot.startTime)] || 0;
-            const bookedCount = (slot.booked || 0) + reviewsHere;
+            // CC-28: the server count already includes reviews (reviewCount).
+            const bookedCount = slot.reviewCount != null ? slot.booked || 0 : (slot.booked || 0) + reviewsHere;
+            const hourReviews = slot.reviews || [];
             const capacity = slot.capacity || 1;
             const isFull = slot.isFull || bookedCount >= capacity;
             const bookings = slot.bookings || [];
@@ -605,7 +607,7 @@ export default function BookingSlots() {
                     )}
 
                     {/* delete icon; only show if slot is NOT booked */}
-                    {!slot.isBooked && (slot.booked || 0) === 0 ? (
+                    {(slot.slotBooked ?? slot.booked ?? 0) === 0 ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -633,11 +635,31 @@ export default function BookingSlots() {
                     <div className='font-semibold text-gray-700 uppercase tracking-wider text-[10px] mb-2 flex items-center justify-between'>
                       <span>Patient Bookings</span>
                       <span className='text-gray-500 font-normal'>
-                        {bookings.length} of {capacity} booked
+                        {bookedCount} of {capacity} booked
                       </span>
                     </div>
 
-                    {bookings.length === 0 ? (
+                    {hourReviews.length > 0 && (
+                      <div className='space-y-2 mb-2'>
+                        {hourReviews.map((r) => (
+                          <div key={`rv-${r.orderId}`} className='p-2 bg-white rounded border border-[#DFCAB0]/60 space-y-1'>
+                            <div className='flex items-center justify-between font-medium text-gray-900'>
+                              <span>{r.fullName}</span>
+                              <span className='text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-normal'>
+                                Review
+                              </span>
+                            </div>
+                            {r.medicine && <div className='text-gray-600 text-[11px]'>{r.medicine}</div>}
+                            {r.phoneNumber && <div className='text-gray-600 text-[11px]'>{r.phoneNumber}</div>}
+                            <Link href={`/admin/${r.userId}/orders`} className='text-[11px] text-[#d67b0e] hover:underline font-medium'>
+                              View Patient Record →
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {bookings.length === 0 && hourReviews.length === 0 ? (
                       <div className='text-gray-500 py-1 italic'>
                         No patient bookings for this slot yet.
                       </div>
