@@ -223,6 +223,11 @@ function normaliseOrder(o) {
  * The common case (1 booking + 1 order) collapses to a single combined row;
  * any extra unpaired booking/order stays as its own row so nothing is hidden.
  */
+// "YYYY-MM-DD" in London for a date / ms value (CC-30).
+function londonDay(v) {
+  return new Date(v).toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+}
+
 function pairByPatient(bookings, orders) {
   // When did each record enter the system? A booking's own createdAt (falling
   // back to its appointment day) marks when it was made; an order is always
@@ -283,8 +288,29 @@ function pairByPatient(bookings, orders) {
           }
         }
       }
+      // CC-30: no appointment for this order, but the patient had a Review
+      // on the day the order was made (or up to 3 days before, still open):
+      // the order came from that review call, so show it on the Review row.
+      let reviewOf = null;
+      if (bestIdx < 0) {
+        const made = madeAt(o);
+        for (let i = 0; i < bs.length; i++) {
+          if (usedBooking.has(i) || bs[i].bookingType !== "Review") continue;
+          if (bs[i].orderId === o.id || !bs[i].appointment) continue;
+          const reviewDay = londonDay(bs[i].appointment);
+          const orderDay = londonDay(made);
+          const gap = (Date.parse(orderDay) - Date.parse(reviewDay)) / 86400000;
+          if (gap >= 0 && gap <= 3 && (!best || madeAt(bs[i]) >= madeAt(best))) {
+            best = bs[i];
+            bestIdx = i;
+          }
+        }
+        if (bestIdx >= 0) {
+          reviewOf = bs[bestIdx].orderId ? os.find((x) => x.id === bs[bestIdx].orderId) || null : null;
+        }
+      }
       if (bestIdx >= 0) usedBooking.add(bestIdx);
-      pairs.push({ booking: best, order: o });
+      pairs.push({ booking: best, order: o, reviewOf });
     }
 
     // Bookings with no order yet (e.g. a fresh appointment awaiting its order)
@@ -302,6 +328,10 @@ function pairByPatient(bookings, orders) {
         key: `${k}-${i}`,
         booking: p.booking,
         order: p.order,
+        // CC-30: set when this Review row also shows the order made on the
+        // review call; reviewOf is the order the review belongs to.
+        reviewOrder: Boolean(p.reviewOf !== undefined && p.booking?.bookingType === "Review" && p.order),
+        reviewOf: p.reviewOf || null,
         fullName: primary.fullName,
         email: primary.email,
         phoneNumber: primary.phoneNumber,
@@ -936,7 +966,7 @@ export default function MergedOcOrdersTable() {
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {/* A review row is a follow-up call, not an order: its order's
                             status is shown and changed on the order's own row. */}
-                        {r.order && r.booking?.bookingType !== "Review" ? (
+                        {r.order && (r.booking?.bookingType !== "Review" || r.reviewOrder) ? (
                           <div className="flex flex-col gap-1">
                             <Select
                               value={r.order.status || "clinicalreview"}
@@ -1434,27 +1464,27 @@ export default function MergedOcOrdersTable() {
           order={{
             id:
               selectedReviewRow.booking?.orderId ||
-              selectedReviewRow.order?.id ||
+              (selectedReviewRow.reviewOf || selectedReviewRow.order)?.id ||
               selectedReviewRow.orderId,
             futureApptAt:
-              selectedReviewRow.order?.futureApptAt ||
-              selectedReviewRow.order?._raw?.futureApptAt ||
+              (selectedReviewRow.reviewOf || selectedReviewRow.order)?.futureApptAt ||
+              (selectedReviewRow.reviewOf || selectedReviewRow.order)?._raw?.futureApptAt ||
               selectedReviewRow.appointment ||
               selectedReviewRow.booking?.appointment,
             futureApptDays:
-              selectedReviewRow.order?.futureApptDays ??
-              selectedReviewRow.order?._raw?.futureApptDays,
+              (selectedReviewRow.reviewOf || selectedReviewRow.order)?.futureApptDays ??
+              (selectedReviewRow.reviewOf || selectedReviewRow.order)?._raw?.futureApptDays,
             futureApptTime:
-              selectedReviewRow.order?.futureApptTime ||
-              selectedReviewRow.order?._raw?.futureApptTime,
+              (selectedReviewRow.reviewOf || selectedReviewRow.order)?.futureApptTime ||
+              (selectedReviewRow.reviewOf || selectedReviewRow.order)?._raw?.futureApptTime,
             appointment:
               selectedReviewRow.appointment ||
               selectedReviewRow.booking?.appointment,
             notes:
               selectedReviewRow.booking?.notes ||
-              selectedReviewRow.order?.notes,
+              (selectedReviewRow.reviewOf || selectedReviewRow.order)?.notes,
             medicineName:
-              selectedReviewRow.order?.medicineName ||
+              (selectedReviewRow.reviewOf || selectedReviewRow.order)?.medicineName ||
               selectedReviewRow.booking?.notes ||
               "Oral Contraception",
           }}
