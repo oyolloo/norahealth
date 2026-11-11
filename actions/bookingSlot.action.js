@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/client/prisma";
 import { revalidatePath } from "next/cache";
 import { getAdminUser } from "./admin.action";
+import { slotHour, windowForHour } from "@/lib/futureAppt";
 
 /* ------------------ helpers ------------------ */
 const isWeekendYMD = (ymd) => {
