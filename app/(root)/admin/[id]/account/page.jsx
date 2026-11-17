@@ -1,6 +1,7 @@
 import { getUserAccountInfobyid } from '@/actions/account.action';
 import React from 'react';
 import AdminNavigation from '../_components/admin-navigation';
+import MissedCallButton from '../_components/missed-call-button';
 import { formatShortDate } from '@/lib/utils';
 import { UpdateAccountForm } from '../_components/update-account';
 import { getRecordByUserId } from '@/actions/record.action';
@@ -34,6 +35,7 @@ const page = async ({ params }) => {
     <div className="container mx-auto p-10">
         <div className='sticky top-0 z-20 -mx-10 mb-4 flex items-center gap-4 bg-[#FAF9F8] px-10 py-3'>
                 <AdminNavigation userId={id} />
+                <MissedCallButton userId={id} />
               </div>
 
               <UpdateAccountForm user={user} />
