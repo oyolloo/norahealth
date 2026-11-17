@@ -6,7 +6,7 @@ import { getAdminUser } from "./admin.action";
 import { getSmsSettings, setSmsSettings, SMS_KEYS } from "@/lib/smsSettings";
 import { getBalance } from "@/lib/recallo24";
 import { sendEmailOne, sendOne } from "@/lib/smsRunner";
-import { automationById, firstName, MAX_SEGMENTS, segmentsOf, toE164Uk } from "@/lib/smsCore";
+import { automationById, firstName, MAX_SEGMENTS, renderText, segmentsOf, toE164Uk } from "@/lib/smsCore";
 
 const PATH = "/admin/automations";
 const DENIED = { success: false, msg: "Unauthorized. User is not admin" };
@@ -287,4 +287,34 @@ export async function sendReviewEmailTestAction(_prev, formData) {
   return r.status === "sent"
     ? { success: true, msg: `Test email sent to ${email}.` }
     : { success: false, msg: `Not sent: ${r.error || r.status}` };
+}
+
+// CC-31: what the patient record's "Missed-call text" dialog shows before
+// sending (read only). The send itself is sendMissedCallAction above.
+export async function getMissedCallPreviewAction(userId) {
+  const admin = await getAdminUser();
+  if (!admin) return DENIED;
+  const s = await getSmsSettings();
+  const a = s.automations.find((x) => x.id === "5");
+  const user = Number(userId)
+    ? await prisma.user.findUnique({
+        where: { id: Number(userId) },
+        select: { id: true, account: { select: { firstName: true, lastName: true, phoneNumber: true } } },
+      })
+    : null;
+  if (!user?.account) return { success: false, msg: "Patient not found." };
+  const phone = user.account.phoneNumber || "";
+  let blocked = null;
+  if (!(await tablesReady())) blocked = NOT_READY.msg;
+  else if (!s.apiKey) blocked = "Save the Recallo24 API key on the Automations page first.";
+  else if (!s.enabled) blocked = "SMS is switched off. Turn on Send SMS on the Automations page first.";
+  else if (!a?.enabled) blocked = "Switch on the Missed call SMS on the Automations page first.";
+  else if (!toE164Uk(phone)) blocked = "This patient has no valid UK mobile number.";
+  return {
+    success: true,
+    name: [user.account.firstName, user.account.lastName].filter(Boolean).join(" "),
+    phone,
+    text: a ? renderText(a.text, { first_name: firstName(user.account.firstName) }) : "",
+    blocked,
+  };
 }
